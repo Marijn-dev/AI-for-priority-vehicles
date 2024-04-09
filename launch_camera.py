@@ -3,6 +3,7 @@ import carla
 import numpy as np
 #import pygame
 import cv2
+import time
 try:
    import queue
 except ImportError:
@@ -60,6 +61,7 @@ camera = world.try_spawn_actor(instance_segmentation_camera, camera_init_trans, 
 
 
 
+
 input("press enter when ready")
 ego_vehicle.set_autopilot(True)
 
@@ -68,27 +70,34 @@ instance_camera_bp = blueprint_library.find('sensor.camera.instance_segmentation
 spawn_point = carla.Transform(carla.Location(x=2.5, z=1.7))
 instance_camera = world.spawn_actor(instance_camera_bp, spawn_point, attach_to=ego_vehicle)
 
+depth_camera_bp= blueprint_library.find('sensor.camera.depth')
+camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
+depth_camera = world.try_spawn_actor(depth_camera_bp, camera_init_trans, attach_to=ego_vehicle)
 
+
+depth_image_queue = queue.Queue()
 instance_image_queue = queue.Queue()
-instance_camera.listen(instance_image_queue.put)
-instance_image=instance_image_queue.get()
-instance_image.save_to_disk('instance_segmentation.png')
 
-a = np.array(instance_image.raw_data)
-print(a)
-print(np.shape(a))
-print(np.unique(a))
+#Create a loop to allow the user to take pictures
+while input('take a picture or [Exit]?')!='Exit':
+    string=time.ctime().replace(" ","_").replace(":","_") #create a unique part of the file name for different pictures
+    
+    instance_camera.listen(instance_image_queue.put)
+    instance_image=instance_image_queue.get()
+    instance_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\instance_camera_"+string +".png")
 
-print(instance_image)
+    depth_camera.listen(depth_image_queue.put)
+    depth_image=depth_image_queue.get()
+    depth_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\depth_camera_"+string +".png")
 
-input('Done?')
+
+
+#Destroy the sensors and cars to clean up
 every_actor = world.get_actors()
 for sensor in every_actor.filter('sensor.*'):
-    print(sensor)
     sensor.destroy()
     
 for vehicle in every_actor.filter('vehicle.*'):
-    print(vehicle)
     print(actor_list[0])
     vehicle.destroy()
 
