@@ -13,6 +13,15 @@ def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
         vehicle.set_autopilot(autopilot)
     return vehicle
 
+def find_car_spawn_point(world):
+    """
+    Attempt to find a suitable pedestrian spawn point on sidewalks or crosswalks.
+    """
+    spawn_location = carla.Location(x=204.56409912109375, y=-270.99392700195312, z=0.7819424271583557)
+    spawn_rotation = carla.Rotation(pitch=0, yaw=-88.68557739257812, roll=0)
+    spawn_transform = carla.Transform(spawn_location, spawn_rotation)
+    return spawn_transform
+
 def find_pedestrian_spawn_point(world):
     """
     Attempt to find a suitable pedestrian spawn point on sidewalks or crosswalks.
@@ -40,15 +49,19 @@ def main():
     try:
         map = world.get_map()
         spawn_points = map.get_spawn_points()
+        car_spawn_point = find_car_spawn_point(world)
         pedestrian_spawn_point = find_pedestrian_spawn_point(world)
         traffic_manager = client.get_trafficmanager()
 
-        # Spawn AI ambulance
-        ai_ambulance = setup_vehicle(world, 'vehicle.ford.ambulance', spawn_points[181], autopilot=False)
+        # Use line below to get coordinates of a spawn point
+        # print(f"Location: {spawn_points[172].location.x}, {spawn_points[172].location.y}, {spawn_points[172].location.z}, Rotation: {spawn_points[172].rotation.pitch}, {spawn_points[172].rotation.yaw}, {spawn_points[172].rotation.roll}")
 
-        # Spawn a few regular cars
+        # Spawn AI ambulance
+        ai_ambulance = setup_vehicle(world, 'vehicle.ford.ambulance', spawn_points[181], autopilot=False, color='255,0,0')
+
+        # Spawn a regular car
         car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
-        regular_cars = setup_vehicle(world, random.choice(car_models), spawn_points[172], autopilot=False)
+        regular_cars = setup_vehicle(world, random.choice(car_models), car_spawn_point, autopilot=False)
 
         # Spawn pedestrians
         pedestrians = [
