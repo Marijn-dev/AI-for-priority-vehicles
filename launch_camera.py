@@ -43,16 +43,22 @@ client.set_timeout(120) #Enable longer wait time in case computer is slow
 
 world = client.get_world()
 car_filter='*Ambulance*' 
-vehicle_bp = world.get_blueprint_library().filter(car_filter)
+# vehicle_bp = world.get_blueprint_library().filter(car_filter)
 blueprint_library= world.get_blueprint_library()
-
+ambulance = blueprint_library.filter('vehicle.ford.ambulance')[0]
 
 #Spawn a car at the spectator
-spectator = world.get_spectator()
-point=spectator.get_transform()
-ego_vehicle=world.try_spawn_actor(vehicle_bp[0],point)
+# spectator = world.get_spectator()
+# point=spectator.get_transform()
 actor_list = []
-
+world = client.load_world('Town01')
+spawn_point = carla.Transform(carla.Location(x=88.619987, y=101.833946, z=0.300000), carla.Rotation(pitch=0.000000, yaw=90.000046, roll=0.000000)) 
+spawn_point2 = carla.Transform(carla.Location(x=88.619987, y=101.833946+12, z=0.300000), carla.Rotation(pitch=0.000000, yaw=90.000046, roll=0.000000)) 
+ego_vehicle=world.spawn_actor(ambulance,spawn_point)
+vehicle2 = world.spawn_actor(ambulance, spawn_point2) # vehicle 2
+spectator = world.get_spectator()
+transform = carla.Transform(ego_vehicle.get_transform().transform(carla.Location(x=+4,z=2.5)), ego_vehicle.get_transform().rotation)
+spectator.set_transform(transform)
 
 #add an instance segmentation camera
 instance_segmentation_camera= blueprint_library.find('sensor.camera.instance_segmentation')
@@ -63,7 +69,7 @@ camera = world.try_spawn_actor(instance_segmentation_camera, camera_init_trans, 
 
 
 input("press enter when ready")
-ego_vehicle.set_autopilot(True)
+ego_vehicle.set_autopilot(False)
 
 instance_camera_bp = blueprint_library.find('sensor.camera.instance_segmentation')
 # Now we have to spawn the camera on the car (attach_to=vehicle), x and y are relative locations and will differ per vehicle
@@ -72,11 +78,12 @@ instance_camera = world.spawn_actor(instance_camera_bp, spawn_point, attach_to=e
 
 depth_camera_bp= blueprint_library.find('sensor.camera.depth')
 camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
-depth_camera = world.try_spawn_actor(depth_camera_bp, camera_init_trans, attach_to=ego_vehicle)
+depth_camera = world.try_spawn_actor(depth_camera_bp, spawn_point, attach_to=ego_vehicle)
 
 
 depth_image_queue = queue.Queue()
 instance_image_queue = queue.Queue()
+
 
 #Create a loop to allow the user to take pictures
 while input('take a picture or [Exit]?')!='Exit':
@@ -84,11 +91,11 @@ while input('take a picture or [Exit]?')!='Exit':
     
     instance_camera.listen(instance_image_queue.put)
     instance_image=instance_image_queue.get()
-    instance_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\instance_camera_"+string +".png")
+    instance_image.save_to_disk(r"/home/marijn/carla-sim/AI-for-priority-vehicles/pictures/instance_camera_"+string +".png")
 
     depth_camera.listen(depth_image_queue.put)
     depth_image=depth_image_queue.get()
-    depth_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\depth_camera_"+string +".png")
+    depth_image.save_to_disk(r"/home/marijn/carla-sim/AI-for-priority-vehicles/pictures/depth_camera_"+string +".png")
 
 
 
