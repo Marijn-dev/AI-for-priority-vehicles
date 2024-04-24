@@ -9,8 +9,5 @@ def map2grid(data,width,height,cell_size=0.1):
 
     for i in range(width):
         for j in range(height):
-            static_costmap[i,j] = np.max(cost_data[x_data==x_data[i] and z_data==z_data[i]])
+            static_costmap[x_data[i],z_data[j]] = np.max(cost_data[x_data==x_data[i] and z_data==z_data[i]])
 
-
-def select_information(data,width,height):
-    
