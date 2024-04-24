@@ -43,10 +43,10 @@ actor_list = []
 input("press enter when ready")
 ego_vehicle.set_autopilot(True)
 
-# instance_camera_bp = blueprint_library.find('sensor.camera.instance_segmentation')
-# # Now we have to spawn the camera on the car (attach_to=vehicle), x and y are relative locations and will differ per vehicle
-# spawn_point = carla.Transform(carla.Location(x=2.5, z=1.7))
-# instance_camera = world.spawn_actor(instance_camera_bp, spawn_point, attach_to=ego_vehicle)
+instance_camera_bp = blueprint_library.find('sensor.camera.instance_segmentation')
+# Now we have to spawn the camera on the car (attach_to=vehicle), x and y are relative locations and will differ per vehicle
+spawn_point = carla.Transform(carla.Location(x=2.5, z=1.7))
+instance_camera = world.spawn_actor(instance_camera_bp, spawn_point, attach_to=ego_vehicle)
 
 depth_camera_bp= blueprint_library.find('sensor.camera.depth')
 camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
@@ -56,22 +56,28 @@ depth_image_queue = queue.Queue()
 instance_image_queue = queue.Queue()
 
 #Create a loop to allow the user to take pictures
-while input('take a picture or [Exit]?')!='Exit':
-    string=time.ctime().replace(" ","_").replace(":","_") #create a unique part of the file name for different pictures
-    
-    # instance_camera.listen(instance_image_queue.put)
-    # instance_image=instance_image_queue.get()
-    # instance_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\instance_camera_"+string +".png")
+try:
+    while True:
+        input('Press Enter to take a picture or Ctrl+C to exit')
+        string = time.strftime("%Y_%m_%d_%H_%M_%S")  # more robust time string format
 
-    depth_camera.listen(depth_image_queue.put)
-    depth_image=depth_image_queue.get()
-    depth_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\depth_camera_"+string +".png")
+        # Save instance segmentation image
+        instance_camera.listen(lambda image: image.save_to_disk(
+            rf"C:\Users\pepij\Documents\GitHub\AI-for-priority-vehicles\Rubens test files\Pictures\instance_camera_"+string +".png"))
+        time.sleep(0.1)  # Add a short delay to ensure the image is captured
 
-#Destroy the sensors and cars to clean up
-every_actor = world.get_actors()
-for sensor in every_actor.filter('sensor.*'):
-    sensor.destroy()
+        # Save depth image
+        depth_camera.listen(lambda image: image.save_to_disk(
+            rf"C:\Users\pepij\Documents\GitHub\AI-for-priority-vehicles\Rubens test files\Pictures\depth_camera_"+string +".png"))
+        time.sleep(0.1)  # Add a short delay to ensure the image is captured
 
-for vehicle in every_actor.filter('vehicle.*'):
-    print(actor_list[0])
-    vehicle.destroy()
+except KeyboardInterrupt:
+    print("Exiting capture loop.")
+
+finally:
+    # Clean up
+    print("Cleaning up actors...")
+    for actor in actor_list:
+        if actor.is_alive:
+            actor.destroy()
+    print("Actors destroyed.")
