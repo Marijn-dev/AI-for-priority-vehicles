@@ -11,7 +11,7 @@ def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
     vehicle = world.try_spawn_actor(vehicle_bp, spawn_point)
     if vehicle:
         vehicle.set_autopilot(autopilot)
-    return vehicle
+    return vehicle, autopilot
 
 def setup_pedestrian(world, spawn_point):
     """Utility function to spawn a pedestrian."""
@@ -28,7 +28,7 @@ def find_spawn_point_1(world):
 
 def find_spawn_point_2(world):
     spawn_location = carla.Location(x=202.4706573486328, y=-328.8112487792969, z=1.1225100755691528)
-    spawn_rotation = carla.Rotation(pitch=0, yaw=88.68557739257812, roll=0)
+    spawn_rotation = carla.Rotation(pitch=0, yaw=91, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
@@ -53,7 +53,7 @@ def main():
     world = client.get_world()
 
     # Comment sentence below out if running the script for a second time
-    # world = client.load_world('Town04')
+    world = client.load_world('Town04')
 
     try:
         map = world.get_map()
@@ -75,8 +75,8 @@ def main():
         # print(f"Location: {spawn_points[172].location.x}, {spawn_points[172].location.y}, {spawn_points[172].location.z}, Rotation: {spawn_points[172].rotation.pitch}, {spawn_points[172].rotation.yaw}, {spawn_points[172].rotation.roll}")
 
         # Spawn two ambulances
-        ai_ambulance = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point, autopilot=False, color='255,0,0')
-        human_ambulance = setup_vehicle(world, 'vehicle.ford.ambulance', ambulance_spawn_point, autopilot=False)
+        ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point, autopilot=True, color='255,0,0')
+        human_ambulance, human_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ambulance_spawn_point, autopilot=True)
 
         # Spawn regular cars
         car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
@@ -95,17 +95,18 @@ def main():
             camera_transform = carla.Transform(transform.transform(carla.Location(x=-8, z=3)), transform.rotation)  # Adjust camera position as needed
             spectator.set_transform(camera_transform)
 
-        # Apply simple motion primitives
-        if ai_ambulance:
+        # Apply simple motion primitives only if autopilot is off
+        if ai_ambulance and not ai_ambulance_autopilot:
             control = carla.VehicleControl(throttle=0.7, steer=0.0)
             ai_ambulance.apply_control(control)
-        if human_ambulance:
+
+        if human_ambulance and not human_ambulance_autopilot:
             control = carla.VehicleControl(throttle=0.7, steer=0.0)
             human_ambulance.apply_control(control)
 
         # Run the scenario for a fixed duration
         start_time = time.time()
-        while time.time() - start_time < 300:
+        while time.time() - start_time < 20:
             world.wait_for_tick()  # assuming running in synchronous mode
 
     finally:
