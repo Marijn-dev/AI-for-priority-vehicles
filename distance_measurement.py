@@ -2,12 +2,25 @@ import carla
 import time
 
 # Function to spawn a vehicle
-def spawn_vehicle(world, vehicle_type='model3', color='255,0,0'):
+def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
+    """Utility function to spawn a vehicle."""
     blueprint_library = world.get_blueprint_library()
-    vehicle_bp = blueprint_library.find('vehicle.ford.ambulance')
-    vehicle_bp.set_attribute('color', color)
-    spawn_points = world.get_map().get_spawn_points()
-    return world.try_spawn_actor(vehicle_bp, spawn_points[0])
+    vehicle_bp = blueprint_library.find(model_id)
+    if color:
+        vehicle_bp.set_attribute('color', color)
+    vehicle = world.try_spawn_actor(vehicle_bp, spawn_point)
+    if vehicle:
+        vehicle.set_autopilot(autopilot)
+    return vehicle
+
+def find_spawn_point(world):
+    """
+    Attempt to find a suitable spawn point on sidewalks or crosswalks.
+    """
+    spawn_location = carla.Location(x=202.4706573486328, y=-328.8112487792969, z=1.1225100755691528)
+    spawn_rotation = carla.Rotation(pitch=0, yaw=88.68557739257812, roll=0)
+    spawn_transform = carla.Transform(spawn_location, spawn_rotation)
+    return spawn_transform
 
 # Function to apply motion primitive and measure distance
 def measure_distance_for_primitive(world, vehicle, throttle, steer, acceleration_duration, measurement_duration):
@@ -39,8 +52,10 @@ def main():
     world = client.get_world()
 
     try:
+        ambulance_spawn_point = find_spawn_point(world)
+
         # Spawn the vehicle
-        vehicle = spawn_vehicle(world)
+        vehicle = setup_vehicle(world, 'vehicle.ford.ambulance', ambulance_spawn_point, autopilot=False, color='255,0,0')
 
         # Set spectator to focus on the AI ambulance
         if vehicle:
@@ -55,7 +70,7 @@ def main():
         
         # List of motion primitives to measure (throttle, steer, acceleration duration, measurement duration)
         primitives = [
-            (0.8, 0, 7, 5),  # Accelerate for 7 seconds, measure for 5 seconds
+            (0.95, 0, 7, 5),  # Accelerate for 7 seconds, measure for 5 seconds
         ]
         
         # Measure distance for each primitive
