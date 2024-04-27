@@ -17,8 +17,8 @@ def find_spawn_point(world):
     """
     Attempt to find a suitable spawn point on sidewalks or crosswalks.
     """
-    spawn_location = carla.Location(x=202.4706573486328, y=-328.8112487792969, z=1.1225100755691528)
-    spawn_rotation = carla.Rotation(pitch=0, yaw=88.68557739257812, roll=0)
+    spawn_location = carla.Location(x=202.4706573486328, y=-318.8112487792969, z=1.1225100755691528)
+    spawn_rotation = carla.Rotation(pitch=0, yaw=91, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
@@ -68,15 +68,42 @@ def main():
             print("Could not spawn vehicle")
             return
         
-        # List of motion primitives to measure (throttle, steer, acceleration duration, measurement duration)
-        primitives = [
-            (0.95, 0, 7, 5),  # Accelerate for 7 seconds, measure for 5 seconds
-        ]
+        # Define motion primitive parameters
+        throttle = 0.8
+        steer = 0.4  
+        measurement_duration = 4
+
+        # Start measuring from this point
+        initial_yaw = vehicle.get_transform().rotation.yaw
+        initial_location = vehicle.get_location()
+
+        # Apply the control to the vehicle
+        vehicle.apply_control(carla.VehicleControl(throttle=throttle, steer=steer))
+
+        # Measure yaw change over time
+        start_time = time.time()
+        while time.time() - start_time < measurement_duration:
+            world.wait_for_tick()  # This assumes you are in synchronous mode
+            final_yaw = vehicle.get_transform().rotation.yaw
+            final_location = vehicle.get_location()
         
-        # Measure distance for each primitive
-        for throttle, steer, acceleration_duration, measurement_duration in primitives:
-            distance = measure_distance_for_primitive(world, vehicle, throttle, steer, acceleration_duration, measurement_duration)
-            print(f"Distance covered with throttle {throttle}, steer {steer} for {measurement_duration} seconds after {acceleration_duration} seconds of acceleration: {distance} meters")
+        # Calculate the change in yaw
+        yaw_change = final_yaw - initial_yaw
+        if yaw_change > 180:
+            yaw_change -= 360
+        elif yaw_change < -180:
+            yaw_change += 360
+
+        # Measure the distance covered
+        distance_covered = initial_location.distance(final_location)
+        
+        # Print the results
+        print(f"Distance covered with throttle {throttle}, steer {steer}: {distance_covered} meters")
+        print(f"Change in yaw: {yaw_change} degrees")
+
+        # Reset vehicle control
+        vehicle.apply_control(carla.VehicleControl(throttle=0, steer=0, brake=1.0))
+        time.sleep(1)  # Wait for the car to stop completely
         
     finally:
         # Clean up and destroy the vehicle
