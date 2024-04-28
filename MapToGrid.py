@@ -28,11 +28,56 @@ def map2grid(map,x,z,labels,width,height,cell_size: float =0.1):
     cost_data=labels2cost(labels)
     x_data= np.round(x,int(np.log10(1/cell_size)))
     z_data= np.round(z,int(np.log10(1/cell_size)))
+    map=np.zeros([width,height])
 
+    # Pre-filter data for each cell
+    filtered_data = {}
     for i in range(width):
         for j in range(height):
-            if (x_data==i*cell_size).any() & (z_data==j*cell_size).any():
-                map[i,j] = np.max(cost_data[(x_data==i*cell_size) & (z_data==j*cell_size)])
+            filtered_data[(i, j)] = cost_data[(x_data==i*cell_size) & (z_data==j*cell_size)]
+
+    # Calculate maximum value for each cell
+    for i in range(width):
+        for j in range(height):
+            if len(filtered_data[(i, j)]) > 0:
+                map[i,j] = np.max(filtered_data[(i, j)])  
+
+
+def map3grid(map,x,z,labels,width,height,cell_size: float =0.1):
+    '''
+    Transform the data into the gridded map
+    
+    ----------------------------
+    Parameters:
+    width: the width of the map in meters
+    height: the height of the map in meters 
+    cell_size: the size of the cells in meters 
+
+    data as a [width,height,[x,y,label]]
+    '''
+    cost_data=labels2cost(labels)
+    x_data= np.round(x,int(np.log10(1/cell_size)))
+    z_data= np.round(z,int(np.log10(1/cell_size)))
+    map=np.zeros([int(width/cell_size),int(height/cell_size)])
+
+    # Initialize an empty array to store the results
+    map = np.zeros([width, height])
+    data=[x_data.flatten(),z_data.flatten()]
+    [unique_values,unique_indices,unique_counts]=np.unique(data,return_index=True,return_counts=True)
+    print(np.shape(data))
+    j=0
+    cost_data_flat=cost_data.flatten()
+    for i in np.round(10*np.transpose(data)):
+        if map[int(i[0]),int(i[1])]<cost_data_flat[j]:
+            map[int(i[0]),int(i[1])]=cost_data_flat[j]
+        j=j+1
+
+
+        
+    
+
+
+
 
 
 def labels2cost(labels):      #for more info on the labels visit: https://carla.readthedocs.io/en/latest/ref_sensors/#instance-segmentation-camera
