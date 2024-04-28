@@ -53,7 +53,7 @@ def main():
     world = client.get_world()
 
     # Comment sentence below out if running the script for a second time
-    # world = client.load_world('Town04')
+    world = client.load_world('Town04')
 
     try:
         map = world.get_map()

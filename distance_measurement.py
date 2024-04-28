@@ -70,7 +70,7 @@ def main():
         
         # Define motion primitive parameters
         throttle = 0.8
-        steer = 0.4  
+        steer = 0.16666666666666666
         measurement_duration = 4
 
         # Start measuring from this point
