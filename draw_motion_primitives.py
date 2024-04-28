@@ -5,40 +5,50 @@ import matplotlib.pyplot as plt
 distance = 5  # in meters
 curvature_deg_per_meter = 5  # in degrees per meter
 
-# Calculate the change in angle over the given distance
-change_in_angle = curvature_deg_per_meter * distance  # in degrees
+# Function to plot a motion primitive
+def plot_motion_primitive(distance, curvature_deg_per_meter):
+    # Check if the motion primitive is a straight line (curvature_deg_per_meter == 0)
+    if curvature_deg_per_meter == 0:
+        # Plot a straight line
+        y = np.linspace(0, distance, num=300)
+        x = np.zeros_like(y)
+        plt.figure(figsize=(12, 12))
+        plt.plot(x, y, 'b-', label=f'Straight Line: {distance:.2f} m')
+    else:
+        # Plot a curved path
+        change_in_angle = curvature_deg_per_meter * distance  # Total angle change in degrees
+        curvature_rad_per_meter = np.radians(curvature_deg_per_meter)  # Curvature in radians per meter
+        radius = 1 / curvature_rad_per_meter  # Radius of the circle
 
-# Calculate the radius of the circle that this arc is part of
-# Formula: radius = 1 / curvature, but first convert curvature to radians per meter
-curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
-radius = 1 / curvature_rad_per_meter
+        # Start and end angles of the arc
+        start_angle = np.pi  # Start from the top
+        end_angle = start_angle - np.radians(change_in_angle)  # End of the arc
 
-# Calculate the arc length
-arc_length = radius * np.radians(change_in_angle)
+        theta = np.linspace(start_angle, end_angle, num=300)
+        x = radius * np.cos(theta) + radius  # Shift x by radius to start at (0,0)
+        y = radius * np.sin(theta)
 
-# The start and end angle of the arc on the circle
-start_angle = np.pi  # start from the top of the circle
-end_angle = start_angle - np.radians(change_in_angle)
+        plt.figure(figsize=(12, 12))
+        plt.plot(x, y, 'b-', label=f'Arc Length: {distance:.2f} m, Angle: {change_in_angle} degrees')
+    
+    # Start and end points
+    plt.scatter([x[0], x[-1]], [y[0], y[-1]], color='red')
+    plt.text(x[0], y[0], "Start", fontsize=12, ha='center')
+    plt.text(x[-1], y[-1], "End", fontsize=12, ha='center')
 
-# Parametric equations for the circle segment (arc)
-theta = np.linspace(start_angle, end_angle, num=300)
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+    # Labels and grid
+    plt.title('Motion Primitive Trajectory')
+    plt.xlabel('X Position (meters)')
+    plt.ylabel('Y Position (meters)')
+    plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
 
-x = x + radius
+    # Show the plot
+    plt.show()
 
-# Plot the motion primitive
-plt.figure(figsize=(12, 12))
-plt.plot(x, y, label=f'Arc Length: {arc_length:.2f} m, Angle: {change_in_angle} degrees')
-plt.scatter([x[0], x[-1]], [y[0], y[-1]], color='red')  # Start and end points
+# Example usage for curved primitive
+plot_motion_primitive(5, 5)
 
-# Annotations and labels
-plt.title('Motion Primitive Trajectory')
-plt.xlabel('X Position (meters)')
-plt.ylabel('Y Position (meters)')
-plt.legend()
-plt.grid(True)
-plt.axis('equal')  # Ensure the aspect ratio is square
-
-# Show the plot
-plt.show()
+# Example usage for straight primitive
+plot_motion_primitive(5, 0)
