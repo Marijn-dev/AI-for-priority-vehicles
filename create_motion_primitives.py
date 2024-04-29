@@ -9,11 +9,27 @@ def create_motion_primitives():
     """
     # Example primitives, curvature in degrees per meter, distance in meters
     primitives = [
-        {'curvature': 0, 'distance': 10},   # Go straight for 10 meters
-        {'curvature': 5, 'distance': 5},    # Mild right turn (5 degrees per meter for 5 meters)
-        {'curvature': -5, 'distance': 5},   # Mild left turn
-        {'curvature': 10, 'distance': 3},   # Sharp right turn
-        {'curvature': -10, 'distance': 3}   # Sharp left turn
+        {'curvature': 0, 'distance': 1},   # Go straight for 10 meters
+        {'curvature': 0, 'distance': 2},
+        {'curvature': 0, 'distance': 3},
+        {'curvature': 5, 'distance': 1},
+        {'curvature': 5, 'distance': 2},
+        {'curvature': 5, 'distance': 3},
+        {'curvature': 10, 'distance': 1},
+        {'curvature': 10, 'distance': 2},
+        {'curvature': 10, 'distance': 3},
+        {'curvature': 15, 'distance': 1},
+        {'curvature': 15, 'distance': 2},
+        {'curvature': 15, 'distance': 3},
+        {'curvature': -5, 'distance': 1},
+        {'curvature': -5, 'distance': 2},
+        {'curvature': -5, 'distance': 3},
+        {'curvature': -10, 'distance': 1},
+        {'curvature': -10, 'distance': 2},
+        {'curvature': -10, 'distance': 3},
+        {'curvature': -15, 'distance': 1},
+        {'curvature': -15, 'distance': 2},
+        {'curvature': -15, 'distance': 3},
     ]
     return primitives
 

@@ -65,8 +65,8 @@ def main():
 
         # Define motion primitive parameters
         throttle = 0.8
-        steer = 0.5714285714285714
-        desired_distance = 3  # Desired distance in meters
+        steer = 0.8571428571428571
+        desired_distance = 1  # Desired distance in meters
 
         # Measure distance and yaw change
         distance, yaw_change = measure_distance_and_yaw_for_primitive(world, vehicle, throttle, steer, desired_distance)
