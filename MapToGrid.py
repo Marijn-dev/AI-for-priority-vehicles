@@ -42,42 +42,52 @@ def map2grid(map,x,z,labels,width,height,cell_size: float =0.1):
             if len(filtered_data[(i, j)]) > 0:
                 map[i,j] = np.max(filtered_data[(i, j)])  
 
+    return map
 
-def map3grid(map,x,z,labels,width,height,cell_size: float =0.1):
-    '''
-    Transform the data into the gridded map
-    
-    ----------------------------
+
+import numpy as np
+
+def map3grid(map, x, z, labels, width, height, cell_size=0.1):
+    """
+    Transform the data into the gridded map.
+
     Parameters:
-    width: the width of the map in meters
-    height: the height of the map in meters 
-    cell_size: the size of the cells in meters 
+    map (np.array): The initial costmap grid.
+    x (np.array): The x coordinates of the data points.
+    z (np.array): The z coordinates of the data points.
+    labels (np.array): The labels associated with each data point.
+    width (float): The width of the map in meters.
+    height (float): The height of the map in meters.
+    cell_size (float): The size of the cells in meters.
+    """
+    cost_data = labels2cost(labels)  # Assuming labels2cost is defined elsewhere
 
-    data as a [width,height,[x,y,label]]
-    '''
-    cost_data=labels2cost(labels)
-    x_data= np.round(x,int(np.log10(1/cell_size)))
-    z_data= np.round(z,int(np.log10(1/cell_size)))
-    map=np.zeros([int(width/cell_size),int(height/cell_size)])
+    # Adjust coordinates to start at the middle bottom of the grid
+    x_offset = width / 2
+    x_centered = x + x_offset
+    z_centered = z  # Assuming z starts at 0 at the bottom
 
-    # Initialize an empty array to store the results
-    map = np.zeros([width, height])
-    data=[x_data.flatten(),z_data.flatten()]
-    [unique_values,unique_indices,unique_counts]=np.unique(data,return_index=True,return_counts=True)
-    print(np.shape(data))
-    j=0
-    cost_data_flat=cost_data.flatten()
-    for i in np.round(10*np.transpose(data)):
-        if map[int(i[0]),int(i[1])]<cost_data_flat[j]:
-            map[int(i[0]),int(i[1])]=cost_data_flat[j]
-        j=j+1
+    # Convert to grid indices
+    x_indices = np.clip((x_centered / cell_size).astype(int), 0, int(width / cell_size) - 1)
+    z_indices = np.clip((z_centered / cell_size).astype(int), 0, int(height / cell_size) - 1)
+
+    # Flatten the data if needed
+    x_indices = x_indices.flatten()
+    z_indices = z_indices.flatten()
+    cost_data = cost_data.flatten()
 
 
-        
+    # Clear the map for new data
+    map.fill(0)
+
+    # Populate the grid
+    for xi, zi, cost in zip(x_indices, z_indices, cost_data):
+        if map.shape[0] > xi >= 0 and map.shape[1] > zi >= 0:  # Ensure indices are within the map bounds
+            map[xi, zi] = max(map[xi, zi], cost)  # Safely use max on single elements
+
+
+    return map
     
-
-
-
 
 
 def labels2cost(labels):      #for more info on the labels visit: https://carla.readthedocs.io/en/latest/ref_sensors/#instance-segmentation-camera
@@ -110,5 +120,7 @@ def labels2cost(labels):      #for more info on the labels visit: https://carla.
                       26:150, #The structure of bridges not the surfaces
                       27:150, #rail tracks without proper car crossings
                       28:249, #Guard rail
+                     'default': 255, # Add a default cost for unrecognized labels
                       }
-    return np.vectorize(specific_costs.get)(labels)
+    # return np.vectorize(specific_costs.get)(labels)
+    return np.vectorize(lambda x: specific_costs.get(x, specific_costs['default']))(labels)
