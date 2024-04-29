@@ -43,7 +43,7 @@ def create_data(file, T_x, T_y):
 	segments = total_timesegments - T_x - T_y + 1
 	X  = np.zeros((segments*nr_vechicles,T_x,2))
 	y  = np.zeros((segments*nr_vechicles,T_y,2))
-
+	
 	# create segments by shifting over locations using i:i+T_x and i+T_x:i+T_x+T_y respectively
 	segments_iterator = 0 # to iterate over segment lengths
 	for j in range(0,nr_vechicles):
@@ -59,6 +59,6 @@ if __name__== "__main__":
 	cwd = os.getcwd()
 	file1 = cwd + '/LSTM/relative_coordinates_T20_1.csv'
 	file2 = cwd + '/LSTM/relative_coordinates_T20_2.csv'
+	
 	X, y = create_data(file1,5,3)
-	print(X[64])
-	print(y[64])
+	
