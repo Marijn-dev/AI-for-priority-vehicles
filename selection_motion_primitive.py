@@ -5,32 +5,50 @@ costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisci
 
 # Generate a set of potential motion primitives
 primitives = [
-    {'curvature': 0, 'distance': 1}, # Go straight for 1 meters
-    {'curvature': 0, 'distance': 2},
-    {'curvature': 0, 'distance': 3},
-    {'curvature': 5, 'distance': 1}, # turn right for 1 meter with 5 degrees per meter
-    {'curvature': 5, 'distance': 2},
-    {'curvature': 5, 'distance': 3},
-    {'curvature': 10, 'distance': 1},
-    {'curvature': 10, 'distance': 2},
-    {'curvature': 10, 'distance': 3},
-    {'curvature': 15, 'distance': 1},
-    {'curvature': 15, 'distance': 2},
-    {'curvature': 15, 'distance': 3},
-    {'curvature': -5, 'distance': 1},
-    {'curvature': -5, 'distance': 2},
-    {'curvature': -5, 'distance': 3},
-    {'curvature': -10, 'distance': 1},
-    {'curvature': -10, 'distance': 2},
-    {'curvature': -10, 'distance': 3},
-    {'curvature': -15, 'distance': 1},
-    {'curvature': -15, 'distance': 2},
-    {'curvature': -15, 'distance': 3},
-]
+        {'curvature': 0, 'distance': 5},   # Go straight for 10 meters
+        {'curvature': 0, 'distance': 7.5},
+        {'curvature': 0, 'distance': 10},
+        {'curvature': 5, 'distance': 5},
+        {'curvature': 5, 'distance': 7.5},
+        {'curvature': 5, 'distance': 10},
+        {'curvature': 10, 'distance': 5},
+        {'curvature': 10, 'distance': 7.5},
+        {'curvature': 10, 'distance': 10},
+        {'curvature': 15, 'distance': 5},
+        {'curvature': 15, 'distance': 7.5},
+        {'curvature': -5, 'distance': 5},
+        {'curvature': -5, 'distance': 7.5},
+        {'curvature': -5, 'distance': 10},
+        {'curvature': -10, 'distance': 5},
+        {'curvature': -10, 'distance': 7.5},
+        {'curvature': -10, 'distance': 10},
+        {'curvature': -15, 'distance': 5},
+        {'curvature': -15, 'distance': 7.5},
+    ]
 
 def calculate_primitive_costs(costmap, primitives, cell_size):
-    # Function to calculate the cost of each motion primitive on the costmap
-     return np.random.rand(len(primitives)) * 10  # Random cost between 0 and 10
+    costs = []
+    for primitive in primitives:
+        curvature_rad_per_meter = np.radians(primitive['curvature'])
+        distance = primitive['distance']
+        if primitive['curvature'] != 0:
+            radius = 1 / curvature_rad_per_meter
+            arc_angle = distance * curvature_rad_per_meter
+            theta = np.linspace(np.pi/2, np.pi/2 - arc_angle, num=300)
+            x = radius * (1 - np.cos(theta))
+            y = radius * np.sin(theta)
+        else:
+            x = np.linspace(0, distance, num=300)
+            y = np.zeros_like(x)
+
+        x_indices = np.clip(np.round(x / cell_size).astype(int), 0, costmap.shape[1] - 1)
+        y_indices = np.clip(np.round(y / cell_size).astype(int), 0, costmap.shape[0] - 1)
+
+        path_costs = costmap[y_indices, x_indices]
+        average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
+        costs.append(average_cost)
+
+    return np.array(costs)
 
 def select_best_primitive(primitive_costs):
     # Function to select the primitive with the lowest cost
@@ -78,6 +96,24 @@ def plot_best_primitive(distance, curvature_deg_per_meter):
     # Show the plot
     plt.show()
 
+def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset=0, y_offset=620):
+    curvature_deg_per_meter = primitive['curvature']
+    distance = primitive['distance']
+    curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
+
+    if curvature_deg_per_meter != 0:
+        radius = 1 / curvature_rad_per_meter
+        arc_angle = distance * curvature_rad_per_meter
+        theta = np.linspace(np.pi/2, np.pi/2 - arc_angle, num=300)
+        x = (radius * (1 - np.cos(theta))) / cell_size + x_offset # Convert to grid scale
+        y = (radius * np.sin(theta)) / cell_size + y_offset  # Convert to grid scale and apply y-offset
+    else:
+        x = np.linspace(0, distance / cell_size, num=300) + x_offset # Convert to grid scale
+        y = np.full_like(x, y_offset)  # Only y-offset
+
+    ax.plot(x, y, 'b-', label='Motion Primitive')
+    ax.legend()
+
 def convert_to_vehicle_control(primitive):
     """
     Converts a motion primitive into VehicleControl settings for CARLA.
@@ -105,6 +141,14 @@ def main(costmap, cell_size):
 
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(np.flipud(costmap), cmap='Set3', interpolation='nearest')
+    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=620)
+    # Set limits for the axes
+    ax.set_xlim([0, 1000])
+    ax.set_ylim([400, 800])
+    plt.show()
 
     control = convert_to_vehicle_control(best_primitive)
 

@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Constants for the motion primitive
-distance = 3  # in meters
-curvature_deg_per_meter = 20  # in degrees per meter
+distance = 10  # in meters
+curvature_deg_per_meter = 10  # in degrees per meter
 
 # Function to plot a motion primitive
 def plot_motion_primitive(distance, curvature_deg_per_meter):
