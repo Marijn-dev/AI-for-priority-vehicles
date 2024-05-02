@@ -165,10 +165,21 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
 
     if curvature_deg_per_meter != 0:
         radius = 1 / curvature_rad_per_meter
-        arc_angle = distance * curvature_rad_per_meter
-        theta = np.linspace(np.pi/2, np.pi/2 - arc_angle, num=300)
-        x = (radius * (1 - np.cos(theta))) / cell_size + x_offset # Convert to grid scale
-        y = (radius * np.sin(theta)) / cell_size + y_offset  # Convert to grid scale and apply y-offset
+        change_in_angle = distance * curvature_rad_per_meter
+        start_angle = -np.pi/2
+        end_angle = start_angle - change_in_angle
+        theta = np.linspace(start_angle, end_angle, num=300)
+        # x = (radius * (1 - np.cos(theta))) / cell_size - radius + x_offset # Convert to grid scale
+        # y = (radius * np.sin(theta)) / cell_size - radius + y_offset  # Convert to grid scale and apply y-offset
+
+        x = (radius * (1 - np.cos(theta))) / cell_size + x_offset  # adjust x to start from the x_offset
+        y = (radius * np.sin(theta)) / cell_size + y_offset  # adjust y to start from the y_offset
+
+        # Recalculate the starting position adjustments
+        x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
+        y_start_adjustment = (radius * np.sin(start_angle)) / cell_size
+        x -= x_start_adjustment
+        y -= y_start_adjustment
     else:
         x = np.linspace(0, distance / cell_size, num=300) + x_offset # Convert to grid scale
         y = np.full_like(x, y_offset)  # Only y-offset
