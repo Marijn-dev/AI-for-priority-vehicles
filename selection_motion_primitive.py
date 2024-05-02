@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap.npy')
+# rotated_costmap = np.flipud(costmap.T)
 
 # Generate a set of potential motion primitives
 primitives = [
@@ -96,7 +97,68 @@ def plot_best_primitive(distance, curvature_deg_per_meter):
     # Show the plot
     plt.show()
 
-def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset=0, y_offset=620):
+import numpy as np
+import matplotlib.pyplot as plt
+
+def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle_width, safety_margin):
+    # Define figure
+    plt.figure(figsize=(12, 12))
+
+    # Setup for motion primitive
+    if curvature_deg_per_meter == 0:  # Straight line case
+        x = np.zeros(300)
+        y = np.linspace(0, distance, num=300)
+    else:  # Curved path
+        change_in_angle = curvature_deg_per_meter * distance
+        curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
+        radius = 1 / curvature_rad_per_meter
+        start_angle = np.pi
+        end_angle = start_angle - np.radians(change_in_angle)
+        theta = np.linspace(start_angle, end_angle, num=300)
+        x = radius * np.cos(theta) + radius
+        y = radius * np.sin(theta)
+
+    # Calculate normal directions for offsets
+    dx = np.gradient(x)
+    dy = np.gradient(y)
+    norms = np.sqrt(dx**2 + dy**2)
+    nx = -dy / norms
+    ny = dx / norms
+
+    # Calculate positions for the vehicle width and safety margins
+    width_offset = vehicle_width / 2
+    safety_offset = safety_margin
+    x_vehicle_left = x + nx * width_offset
+    y_vehicle_left = y + ny * width_offset
+    x_vehicle_right = x - nx * width_offset
+    y_vehicle_right = y - ny * width_offset
+    x_safety_left = x + nx * (width_offset + safety_offset)
+    y_safety_left = y + ny * (width_offset + safety_offset)
+    x_safety_right = x - nx * (width_offset + safety_offset)
+    y_safety_right = y - ny * (width_offset + safety_offset)
+
+    # Plotting the main path
+    plt.plot(x, y, 'b-', label='Center Path')
+    plt.scatter([x[0], x[-1]], [y[0], y[-1]], color='red')  # Start and End markers
+    plt.text(x[0], y[0], 'Start', fontsize=12, ha='center')
+    plt.text(x[-1], y[-1], 'End', fontsize=12, ha='center')
+
+    # Plotting the vehicle boundaries and safety margins
+    plt.plot(x_vehicle_left, y_vehicle_left, 'r--', label='Left Vehicle Edge')
+    plt.plot(x_vehicle_right, y_vehicle_right, 'r--', label='Right Vehicle Edge')
+    plt.plot(x_safety_left, y_safety_left, 'g--', label='Left Safety Margin')
+    plt.plot(x_safety_right, y_safety_right, 'g--', label='Right Safety Margin')
+
+    # Setting up the plot
+    plt.title('Motion Primitive with Vehicle Width and Safety Margins')
+    plt.xlabel('X Position (meters)')
+    plt.ylabel('Y Position (meters)')
+    plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
+
+def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_offset):
     curvature_deg_per_meter = primitive['curvature']
     distance = primitive['distance']
     curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
@@ -112,6 +174,8 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset=0, y
         y = np.full_like(x, y_offset)  # Only y-offset
 
     ax.plot(x, y, 'b-', label='Motion Primitive')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
     ax.legend()
 
 def convert_to_vehicle_control(primitive):
@@ -137,17 +201,20 @@ def main(costmap, cell_size):
     primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size)
 
     # Select the best primitive
-    best_primitive = select_best_primitive(primitive_costs)
+    # best_primitive = select_best_primitive(primitive_costs)
+    best_primitive = primitives[8]
 
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
 
+    draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 1, 0.2)
+
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.imshow(np.flipud(costmap), cmap='Set3', interpolation='nearest')
-    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=620)
+    ax.imshow(costmap, cmap='Set3', interpolation='nearest')
+    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600)
     # Set limits for the axes
     ax.set_xlim([0, 1000])
-    ax.set_ylim([400, 800])
+    ax.set_ylim([800, 400])
     plt.show()
 
     control = convert_to_vehicle_control(best_primitive)
