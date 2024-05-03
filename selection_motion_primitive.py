@@ -30,11 +30,13 @@ primitives = [
         {'curvature': -15, 'distance': 7.5},
     ]
 
-def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset):
+def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset, vehicle_width, safety_margin):
     costs = []
     for primitive in primitives:
         curvature_rad_per_meter = np.radians(primitive['curvature'])
         distance = primitive['distance']
+        half_width = (vehicle_width / 2) + safety_margin  # Half width including safety margin
+
         if primitive['curvature'] != 0:
             radius = 1 / curvature_rad_per_meter
             change_in_angle = distance * curvature_rad_per_meter
@@ -42,21 +44,47 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             end_angle = start_angle - change_in_angle
             theta = np.linspace(start_angle, end_angle, num=300)
 
-            x = (radius * (1 - np.cos(theta))) / cell_size + x_offset  # adjust x to start from the x_offset
-            y = (radius * np.sin(theta)) / cell_size + y_offset  # adjust y to start from the y_offset
+            x_center = (radius * (1 - np.cos(theta))) / cell_size + x_offset
+            y_center = (radius * np.sin(theta)) / cell_size + y_offset
 
-            # Recalculate the starting position adjustments
+            # Adjust for the starting position
             x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
-            y_start_adjustment = (radius * np.sin(start_angle)) / cell_size
-            x -= x_start_adjustment
-            y -= y_start_adjustment
+            y_start_adjustment = (radius * (1 - np.sin(start_angle))) / cell_size
+            x_center -= x_start_adjustment
+            y_center -= y_start_adjustment
+
+            # Calculate perpendicular offsets for safety margins
+            perpendicular_width = half_width / cell_size
+            dx = -np.sin(theta) / cell_size
+            dy = np.cos(theta) / cell_size
+
+            # Normalize the direction vectors
+            norm_length = np.sqrt(dx**2 + dy**2)
+            dx /= norm_length
+            dy /= norm_length
+
+            x_left = x_center + dy * perpendicular_width
+            x_right = x_center - dy * perpendicular_width
+            y_left = y_center - dx * perpendicular_width
+            y_right = y_center + dx * perpendicular_width
+
+            # Collect all x and y indices for costmap look-up
+            x_indices = np.round(np.concatenate((x_left, x_right)) / cell_size).astype(int)
+            y_indices = np.round(np.concatenate((y_left, y_right)) / cell_size).astype(int)
+
         else:
-            x = np.linspace(0, distance, num=300)
-            y = np.zeros_like(x)
+            x_center = np.linspace(0, distance / cell_size, num=300) + x_offset
+            y_center = np.full_like(x_center, y_offset)
 
-        x_indices = np.clip(np.round(x / cell_size).astype(int), 0, costmap.shape[1] - 1)
-        y_indices = np.clip(np.round(y / cell_size).astype(int), 0, costmap.shape[0] - 1)
+            # Straight path buffers
+            x_indices = np.round(np.concatenate([x_center for _ in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
+            y_indices = np.round(np.concatenate([y_center + i for i in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
 
+        # Ensure indices are within bounds
+        x_indices = np.clip(x_indices, 0, costmap.shape[1] - 1)
+        y_indices = np.clip(y_indices, 0, costmap.shape[0] - 1)
+
+        # Get costs from costmap
         path_costs = costmap[y_indices, x_indices]
         average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
         normalized_cost = average_cost / distance  # Normalize by the distance traveled
@@ -171,10 +199,11 @@ def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle
     plt.axis('equal')
     plt.show()
 
-def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_offset):
+def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_offset, vehicle_width, safety_margin):
     curvature_deg_per_meter = primitive['curvature']
     distance = primitive['distance']
     curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
+    half_width = (vehicle_width / 2) + safety_margin  # Half width including safety margin
 
     if curvature_deg_per_meter != 0:
         radius = 1 / curvature_rad_per_meter
@@ -183,21 +212,66 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
         end_angle = start_angle - change_in_angle
         theta = np.linspace(start_angle, end_angle, num=300)
 
-        x = (radius * (1 - np.cos(theta))) / cell_size + x_offset  # adjust x to start from the x_offset
-        y = (radius * np.sin(theta)) / cell_size + y_offset  # adjust y to start from the y_offset
+        x_center = (radius * (1 - np.cos(theta))) / cell_size + x_offset  # adjust x to start from the x_offset
+        y_center = (radius * np.sin(theta)) / cell_size + y_offset  # adjust y to start from the y_offset
 
         # Recalculate the starting position adjustments
         x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
         y_start_adjustment = (radius * np.sin(start_angle)) / cell_size
-        x -= x_start_adjustment
-        y -= y_start_adjustment
-    else:
-        x = np.linspace(0, distance / cell_size, num=300) + x_offset # Convert to grid scale
-        y = np.full_like(x, y_offset)  # Only y-offset
+        x_center -= x_start_adjustment
+        y_center -= y_start_adjustment
 
-    ax.plot(x, y, 'b-', label='Motion Primitive')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
+        # Calculate derivatives
+        dx = np.sin(theta) / cell_size  # x derivative
+        dy = np.cos(theta) / cell_size   # y derivative
+
+        # Calculate normal vectors for left and right sides
+        norm_length = np.sqrt(dx**2 + dy**2)
+        dx /= norm_length
+        dy /= norm_length
+
+        # Calculate offsets for buffers and safety margins
+        perpendicular_width = half_width / cell_size
+        x_buffer_left = x_center + dy * perpendicular_width
+        y_buffer_left = y_center - dx * perpendicular_width
+        x_buffer_right = x_center - dy * perpendicular_width
+        y_buffer_right = y_center + dx * perpendicular_width
+
+        x_safety_left = x_buffer_left + dy * (safety_margin / cell_size)
+        y_safety_left = y_buffer_left - dx * (safety_margin / cell_size)
+        x_safety_right = x_buffer_right - dy * (safety_margin / cell_size)
+        y_safety_right = y_buffer_right + dx * (safety_margin / cell_size)
+
+        # Plotting all lines
+        ax.plot(x_center, y_center, 'b-', label='Motion Primitive')
+        ax.plot(x_buffer_left, y_buffer_left, 'r--', label='Left Buffer')
+        ax.plot(x_buffer_right, y_buffer_right, 'r--', label='Right Buffer')
+        ax.plot(x_safety_left, y_safety_left, 'g--', label='Left Safety Margin')
+        ax.plot(x_safety_right, y_safety_right, 'g--', label='Right Safety Margin')
+    else:
+        # Straight motion primitive setup
+        x_center = np.linspace(0, distance / cell_size, num=300) + x_offset # Convert to grid scale
+        y_center = np.full_like(x_center, y_offset)  # Only y-offset
+
+        # Offset calculation for straight paths
+        perpendicular_width = half_width / cell_size
+        safety_margin_cells = safety_margin / cell_size
+
+        # Since the motion is straight along the x-axis, only y-offsets are needed
+        y_buffer_left = y_center + perpendicular_width
+        y_buffer_right = y_center - perpendicular_width
+        y_safety_left = y_center + perpendicular_width + safety_margin_cells
+        y_safety_right = y_center - perpendicular_width - safety_margin_cells
+
+        # Plotting all lines
+        ax.plot(x_center, y_center, 'b-', label='Motion Primitive')
+        ax.plot(x_center, y_buffer_left, 'r--', label='Left Buffer')
+        ax.plot(x_center, y_buffer_right, 'r--', label='Right Buffer')
+        ax.plot(x_center, y_safety_left, 'g--', label='Left Safety Margin')
+        ax.plot(x_center, y_safety_right, 'g--', label='Right Safety Margin')
+
+    ax.set_xlabel('x (cells)')
+    ax.set_ylabel('y (cells)')
     ax.legend()
 
 def convert_to_vehicle_control(primitive):
@@ -220,20 +294,20 @@ def convert_to_vehicle_control(primitive):
 
 def main(costmap, cell_size):
     # Calculate the costs of each primitive on the costmap
-    primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600)
+    primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426, safety_margin=0.2)
 
     # Select the best primitive
     best_primitive = select_best_primitive(primitive_costs)
-    # best_primitive = primitives[8]
+    # best_primitive = primitives[0]
 
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
 
-    draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 1, 0.2)
+    draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, 0.2)
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(costmap, cmap='Set3', interpolation='nearest')
-    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600)
+    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600, vehicle_width=2.426, safety_margin=0.2)
     # Set limits for the axes
     ax.set_xlim([0, 1000])
     ax.set_ylim([800, 400])
