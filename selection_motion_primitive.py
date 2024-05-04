@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Load the costmap
 costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
@@ -9,33 +10,53 @@ y_offset=600
 
 # Generate a set of potential motion primitives
 primitives = [
-        {'curvature': 0, 'distance': 5},   # Go straight for 10 meters
-        {'curvature': 0, 'distance': 7.5},
-        {'curvature': 0, 'distance': 10},
-        {'curvature': 5, 'distance': 5},
-        {'curvature': 5, 'distance': 7.5},
-        {'curvature': 5, 'distance': 10},
-        {'curvature': 10, 'distance': 5},
-        {'curvature': 10, 'distance': 7.5},
-        {'curvature': 10, 'distance': 10},
-        {'curvature': 15, 'distance': 5},
-        {'curvature': 15, 'distance': 7.5},
-        {'curvature': -5, 'distance': 5},
-        {'curvature': -5, 'distance': 7.5},
-        {'curvature': -5, 'distance': 10},
-        {'curvature': -10, 'distance': 5},
-        {'curvature': -10, 'distance': 7.5},
-        {'curvature': -10, 'distance': 10},
-        {'curvature': -15, 'distance': 5},
-        {'curvature': -15, 'distance': 7.5},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.9},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.5},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        {'curvature': 5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 5, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 5, 'distance': 20, 'velocity': 0.5},
+        {'curvature': 5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 10, 'distance': 20, 'velocity': 0.5},
+        {'curvature': 10, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 15, 'distance': 20, 'velocity': 0.5},
+        {'curvature': 15, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -5, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -5, 'distance': 20, 'velocity': 0.5},
+        {'curvature': -5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -10, 'distance': 20, 'velocity': 0.5},
+        {'curvature': -10, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -15, 'distance': 20, 'velocity': 0.5},
+        {'curvature': -15, 'distance': 20, 'velocity': 0.7},
     ]
 
-def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset, vehicle_width, safety_margin):
+def dynamic_safety_margin(velocity, base_margin=0.5, velocity_scale=0.8):
+    return base_margin + velocity_scale * velocity
+def time_penalty(velocity, base_penalty=10.0):
+    return base_penalty / (1 + velocity)
+
+def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset, vehicle_width):
     costs = []
     for primitive in primitives:
         curvature_rad_per_meter = np.radians(primitive['curvature'])
         distance = primitive['distance']
-        half_width = (vehicle_width / 2) + safety_margin  # Half width including safety margin
+        # Calculate the dynamically adjusted safety margin
+        dynamic_margin = dynamic_safety_margin(primitive['velocity'])
+        half_width = (vehicle_width / 2) + dynamic_margin  # Half width including safety margin
+        # Calculate time penalty
+        penalty = time_penalty(primitive['velocity'])
 
         if primitive['curvature'] != 0:
             radius = 1 / curvature_rad_per_meter
@@ -87,7 +108,7 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
         # Get costs from costmap
         path_costs = costmap[y_indices, x_indices]
         average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
-        normalized_cost = average_cost / distance  # Normalize by the distance traveled
+        normalized_cost = (average_cost + dynamic_margin) / distance - penalty
         costs.append(normalized_cost)
 
     return np.array(costs)
@@ -141,9 +162,12 @@ def plot_best_primitive(distance, curvature_deg_per_meter):
 import numpy as np
 import matplotlib.pyplot as plt
 
-def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle_width, safety_margin):
+def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle_width, primitive):
     # Define figure
     plt.figure(figsize=(12, 12))
+
+    # Calculate the dynamically adjusted safety margin
+    dynamic_margin = dynamic_safety_margin(primitive['velocity'])
 
     # Setup for motion primitive
     if curvature_deg_per_meter == 0:  # Straight line case
@@ -168,7 +192,7 @@ def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle
 
     # Calculate positions for the vehicle width and safety margins
     width_offset = vehicle_width / 2
-    safety_offset = safety_margin
+    safety_offset = dynamic_margin
     x_vehicle_left = x + nx * width_offset
     y_vehicle_left = y + ny * width_offset
     x_vehicle_right = x - nx * width_offset
@@ -199,11 +223,13 @@ def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle
     plt.axis('equal')
     plt.show()
 
-def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_offset, vehicle_width, safety_margin):
+def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_offset, vehicle_width):
     curvature_deg_per_meter = primitive['curvature']
     distance = primitive['distance']
     curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
-    half_width = (vehicle_width / 2) + safety_margin  # Half width including safety margin
+    # Calculate the dynamically adjusted safety margin
+    dynamic_margin = dynamic_safety_margin(primitive['velocity'])
+    half_width = (vehicle_width / 2) + dynamic_margin  # Half width including safety margin
 
     if curvature_deg_per_meter != 0:
         radius = 1 / curvature_rad_per_meter
@@ -237,10 +263,10 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
         x_buffer_right = x_center - dy * perpendicular_width
         y_buffer_right = y_center + dx * perpendicular_width
 
-        x_safety_left = x_buffer_left + dy * (safety_margin / cell_size)
-        y_safety_left = y_buffer_left - dx * (safety_margin / cell_size)
-        x_safety_right = x_buffer_right - dy * (safety_margin / cell_size)
-        y_safety_right = y_buffer_right + dx * (safety_margin / cell_size)
+        x_safety_left = x_buffer_left + dy * (dynamic_margin / cell_size)
+        y_safety_left = y_buffer_left - dx * (dynamic_margin / cell_size)
+        x_safety_right = x_buffer_right - dy * (dynamic_margin / cell_size)
+        y_safety_right = y_buffer_right + dx * (dynamic_margin / cell_size)
 
         # Plotting all lines
         ax.plot(x_center, y_center, 'b-', label='Motion Primitive')
@@ -255,7 +281,7 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
 
         # Offset calculation for straight paths
         perpendicular_width = half_width / cell_size
-        safety_margin_cells = safety_margin / cell_size
+        safety_margin_cells = dynamic_margin / cell_size
 
         # Since the motion is straight along the x-axis, only y-offsets are needed
         y_buffer_left = y_center + perpendicular_width
@@ -294,7 +320,7 @@ def convert_to_vehicle_control(primitive):
 
 def main(costmap, cell_size):
     # Calculate the costs of each primitive on the costmap
-    primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426, safety_margin=0.2)
+    primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
 
     # Select the best primitive
     best_primitive = select_best_primitive(primitive_costs)
@@ -303,11 +329,11 @@ def main(costmap, cell_size):
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
 
-    draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, 0.2)
+    draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, best_primitive)
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(costmap, cmap='Set3', interpolation='nearest')
-    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600, vehicle_width=2.426, safety_margin=0.2)
+    plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600, vehicle_width=2.426)
     # Set limits for the axes
     ax.set_xlim([0, 1000])
     ax.set_ylim([800, 400])
