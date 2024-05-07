@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap2.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -107,8 +107,13 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
 
         # Get costs from costmap
         path_costs = costmap[y_indices, x_indices]
-        average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
-        normalized_cost = (average_cost + dynamic_margin) / distance - penalty
+        print(path_costs)
+        print(str(np.count_nonzero(costmap))+"deze")
+        # average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
+        average_cost = np.sum(path_costs) if len(path_costs) > 0 else np.inf
+        print(average_cost)
+        normalized_cost = (average_cost + dynamic_margin) / distance + penalty
+        print(normalized_cost)
         costs.append(normalized_cost)
 
     return np.array(costs)
@@ -312,7 +317,7 @@ def convert_to_vehicle_control(primitive):
     """
     # Placeholder function to convert curvature and distance to throttle and steer
     # These conversions would need to be calibrated based on vehicle behavior in CARLA
-    throttle = 0.8  # Example fixed throttle for simplicity
+    throttle = primitive['velocity']
     steer = np.clip(primitive['curvature'] / 17.5, -1, 1)  # Normalize and limit steer value
     brake = 0  # No braking in these examples
     
@@ -321,10 +326,12 @@ def convert_to_vehicle_control(primitive):
 def main(costmap, cell_size):
     # Calculate the costs of each primitive on the costmap
     primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
+    print(primitive_costs)
 
     # Select the best primitive
     best_primitive = select_best_primitive(primitive_costs)
     # best_primitive = primitives[0]
+    print(best_primitive)
 
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
