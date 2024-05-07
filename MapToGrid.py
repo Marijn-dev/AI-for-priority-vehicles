@@ -1,17 +1,6 @@
 import numpy as np
 
 #Initiate the map
-def initiate_map(width: int,height: int,cell_size=0.1):
-    '''
-    Initiates the costmap width and height divided by cellsize need to be integers 
-    ---------------------
-    Parameters:
-    width: the width of the map in meters
-    height: the height of the map in meters 
-    cell_size: the size of the cells in meters 
-    '''
-    
-    return costmap
 
 def map2grid(map,x,z,labels,width,height,cell_size: float =0.1):
     '''
@@ -28,21 +17,20 @@ def map2grid(map,x,z,labels,width,height,cell_size: float =0.1):
     cost_data=labels2cost(labels)
     x_data= np.round(x,int(np.log10(1/cell_size)))
     z_data= np.round(z,int(np.log10(1/cell_size)))
-    map=np.zeros([width,height])
+    map=np.zeros([width,height])-10
 
     # Pre-filter data for each cell
     filtered_data = {}
-    for i in range(width):
-        for j in range(height):
-            filtered_data[(i, j)] = cost_data[(x_data==i*cell_size) & (z_data==j*cell_size)]
+    for i in range(int(-width/2),int(width/2),1):
+        for j in range(0,int(height/2),1):
+            filtered_data[(i, j)] = cost_data[(x_data==i) & (z_data==j)]
 
     # Calculate maximum value for each cell
-    for i in range(width):
-        for j in range(height):
+    for i in range(int(-width/2),int(width/2),1):
+        for j in range(0,int(height/2),1):
             if len(filtered_data[(i, j)]) > 0:
-                map[i,j] = np.max(filtered_data[(i, j)])  
-
-    return map
+                map[i,j] = np.max(filtered_data[(i, j)]) 
+    return map 
 
 
 import numpy as np
@@ -78,13 +66,12 @@ def map3grid(map, x, z, labels, width, height, cell_size=0.1):
 
 
     # Clear the map for new data
-    map.fill(0)
+    map.fill(-10)
 
     # Populate the grid
     for xi, zi, cost in zip(x_indices, z_indices, cost_data):
-        if map.shape[0] > xi >= 0 and map.shape[1] > zi >= 0:  # Ensure indices are within the map bounds
-            map[xi, zi] = max(map[xi, zi], cost)  # Safely use max on single elements
-
+      #  if map.shape[0] > xi >= 0 and map.shape[1] > zi >= 0:  # Ensure indices are within the map bounds
+        map[xi, zi] = max(map[xi, zi], cost)  # Safely use max on single elements
 
     return map
     
@@ -92,7 +79,7 @@ def map3grid(map, x, z, labels, width, height, cell_size=0.1):
 
 def labels2cost(labels):      #for more info on the labels visit: https://carla.readthedocs.io/en/latest/ref_sensors/#instance-segmentation-camera
     specific_costs = {0:0,    #unlabeld things and things without collissions
-                      1:0,    #roads 
+                      1:1,    #roads 
                       2:50,   #sidewalks
                       3:255,  #buildings
                       4:254,  #Wall
@@ -124,3 +111,62 @@ def labels2cost(labels):      #for more info on the labels visit: https://carla.
                       }
     # return np.vectorize(specific_costs.get)(labels)
     return np.vectorize(lambda x: specific_costs.get(x, specific_costs['default']))(labels)
+
+def create_collision_map(participants_labels,participants_positions,time_step,ego_position,cost_map,prediction_horizon):
+    #ASsumes the positions are in the grid size already
+    #create a matrix per timestep M(x,z,t)
+    [x_ego,y_ego] = ego_position
+    M=[np.zeros_like(cost_map)]*prediction_horizon
+
+    #find orientation of the cars and pedestrians
+    orientations=determine_orientation(participants_positions)
+    for p in range(len(participants_labels)):
+        for t in participants_positions[:,0]:
+            place_traffic_participants(t,p,participants_labels,participants_positions,M)
+
+   
+   
+   
+
+def place_traffic_participants(t,p,participants_labels,participants_positions,M):   
+    x_car=participants_positions[p]
+    y_car=participants_positions[p]
+
+    if participants_labels[p] =='car':
+        actor_radius = 10 #in gridpoints (assumption assuming gridsize=0.1m)
+    
+    if participants_labels[p] =='pedestrian':
+        actor_radius = 5 #in gridpoints (assumption assuming gridsize=0.1m)
+    
+    for x in range(-actor_radius + x_car,actor_radius + x_car,1):
+        for y in range(-actor_radius + y_car,actor_radius + y_car,1):
+            M[t][x,y]=512 
+
+
+
+
+
+    for t in range(prediction_horizon):
+        for p in range(len(participants_labels)):
+            participants_positions[p,time_step]
+
+            if participants_labels[p] == 'pedestrian':
+                pass
+            elif p == 'car':
+                pass    
+
+def determine_orientation(participants_positions):
+    #every participant has an x and y coordinate
+    orientation=np.zeros(len(participants_positions[:,0])/2,len(participants_positions[0,:]))
+    for p in range(len(participants_positions[:,0])/2):
+        for t in range(len(participants_positions[0,:])):
+            if t ==0:
+                dx=-participants_positions[t,2*p] + participants_positions[t+1,2*p]
+                dy=-participants_positions[t,2*p+1] + participants_positions[t+1,2*p+1]
+                orientation[t,p] = np.tan(dx/dy) 
+
+            else:
+                dx=participants_positions[t,2*p] - participants_positions[t-1,2*p]
+                dy=participants_positions[t,2*p+1] - participants_positions[t-1,2*p+1]
+                orientation[t,p] = np.tan(dx/dy)
+    return orientation

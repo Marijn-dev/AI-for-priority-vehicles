@@ -8,18 +8,6 @@ try:
    import queue
 except ImportError:
    import Queue as queue
-# # Render object to keep and pass the PyGame surface
-# class RenderObject(object):
-#     def __init__(self, width, height):
-#         init_image = np.random.randint(0,255,(height,width,3),dtype='uint8')
-#         self.surface = pygame.surfarray.make_surface(init_image.swapaxes(0,1))
-
-# # Camera sensor callback, reshapes raw data from camera into 2D RGB and applies to PyGame surface
-# def pygame_callback(data, obj):
-#     img = np.reshape(np.copy(data.raw_data), (data.height, data.width, 4))
-#     img = img[:,:,:3]
-#     img = img[:, :, ::-1]
-#     obj.surface = pygame.surfarray.make_surface(img.swapaxes(0,1))
 
 
 def camera_callback(image, data):
@@ -46,21 +34,11 @@ car_filter='*Ambulance*'
 vehicle_bp = world.get_blueprint_library().filter(car_filter)
 blueprint_library= world.get_blueprint_library()
 
-
 #Spawn a car at the spectator
 spectator = world.get_spectator()
 point=spectator.get_transform()
 ego_vehicle=world.try_spawn_actor(vehicle_bp[0],point)
 actor_list = []
-
-
-#add an instance segmentation camera
-instance_segmentation_camera= blueprint_library.find('sensor.camera.instance_segmentation')
-camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
-camera = world.try_spawn_actor(instance_segmentation_camera, camera_init_trans, attach_to=ego_vehicle)
-
-
-
 
 input("press enter when ready")
 ego_vehicle.set_autopilot(True)
@@ -74,30 +52,32 @@ depth_camera_bp= blueprint_library.find('sensor.camera.depth')
 camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
 depth_camera = world.try_spawn_actor(depth_camera_bp, camera_init_trans, attach_to=ego_vehicle)
 
-
 depth_image_queue = queue.Queue()
 instance_image_queue = queue.Queue()
 
 #Create a loop to allow the user to take pictures
-while input('take a picture or [Exit]?')!='Exit':
-    string=time.ctime().replace(" ","_").replace(":","_") #create a unique part of the file name for different pictures
-    
-    instance_camera.listen(instance_image_queue.put)
-    instance_image=instance_image_queue.get()
-    instance_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\instance_camera_"+string +".png")
+try:
+    while True:
+        input('Press Enter to take a picture or Ctrl+C to exit')
+        string = time.strftime("%Y_%m_%d_%H_%M_%S")  # more robust time string format
 
-    depth_camera.listen(depth_image_queue.put)
-    depth_image=depth_image_queue.get()
-    depth_image.save_to_disk(r"C:\Users\20192709\Documents\5IAP0 Interdisciplinary team project\Pictures\depth_camera_"+string +".png")
+        # Save instance segmentation image
+        instance_camera.listen(lambda image: image.save_to_disk(
+            rf"C:\Users\pepij\Documents\GitHub\AI-for-priority-vehicles\Rubens test files\Pictures\instance_camera_"+string +".png"))
+        time.sleep(0.1)  # Add a short delay to ensure the image is captured
 
+        # Save depth image
+        depth_camera.listen(lambda image: image.save_to_disk(
+            rf"C:\Users\pepij\Documents\GitHub\AI-for-priority-vehicles\Rubens test files\Pictures\depth_camera_"+string +".png"))
+        time.sleep(0.1)  # Add a short delay to ensure the image is captured
 
+except KeyboardInterrupt:
+    print("Exiting capture loop.")
 
-#Destroy the sensors and cars to clean up
-every_actor = world.get_actors()
-for sensor in every_actor.filter('sensor.*'):
-    sensor.destroy()
-    
-for vehicle in every_actor.filter('vehicle.*'):
-    print(actor_list[0])
-    vehicle.destroy()
-
+finally:
+    # Clean up
+    print("Cleaning up actors...")
+    for actor in actor_list:
+        if actor.is_alive:
+            actor.destroy()
+    print("Actors destroyed.")
