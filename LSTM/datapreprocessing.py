@@ -34,8 +34,8 @@ def create_data(file, T_x, T_y):
 	locations = np.zeros((nr_vechicles,total_timesegments,2))
 	i = 0
 	for vehicles in unique_vehicles:
-		relative_x = df_vehicle[df_vehicle['Actor ID'] == vehicles]['Relative X']
-		relative_y = df_vehicle[df_vehicle['Actor ID'] == vehicles]['Relative Y']
+		relative_x = df_vehicle[df_vehicle['Actor ID'] == vehicles]['X']
+		relative_y = df_vehicle[df_vehicle['Actor ID'] == vehicles]['Y']
 		locations[i] = np.transpose(np.array([relative_x,relative_y]))
 		i += 1
 		
@@ -57,8 +57,12 @@ def create_data(file, T_x, T_y):
 if __name__== "__main__":
 	# Get file name (location)
 	cwd = os.getcwd()
-	file1 = cwd + '/LSTM/relative_coordinates_T20_1.csv'
-	file2 = cwd + '/LSTM/relative_coordinates_T20_2.csv'
+	file1 = cwd + '/data/Coordinates_T30_run_1.csv'
+	# file2 = cwd + '/LSTM/relative_coordinates_T20_2.csv'
 	
 	X, y = create_data(file1,5,3)
+	print(np.shape(X))
+	print(np.shape(y))
+	print(X[0])
+	print(y[0])
 	
