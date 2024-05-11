@@ -18,7 +18,7 @@ settings.synchronous_mode = False
 # settings.fixed_delta_seconds = 0.02
 world.apply_settings(settings) 
 
-world = client.load_world('Town01')
+# world = client.load_world('Town01')
 
 
 ## Spawn cars
