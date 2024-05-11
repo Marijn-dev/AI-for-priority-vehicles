@@ -33,13 +33,13 @@ def find_spawn_point_2(world):
     return spawn_transform
 
 def find_spawn_point_3(world):
-    spawn_location = carla.Location(x=224.24923706054688+random.randrange(-20, 20,2), y=-310.7073059082031, z=1.3423326015472412)
+    spawn_location = carla.Location(x=232.24923706054688+random.randrange(-20, 20,2), y=-310.7073059082031, z=1.3423326015472412)
     spawn_rotation = carla.Rotation(pitch=0, yaw=178.68557739257812, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_4(world):
-    spawn_location = carla.Location(x=177.24923706054688+random.randrange(-20, 20,2), y=-307.7073059082031, z=1.3423326015472412)
+    spawn_location = carla.Location(x=175.24923706054688+random.randrange(-20, 20,2), y=-307.7073059082031, z=1.3423326015472412)
     spawn_rotation = carla.Rotation(pitch=-6, yaw=-1.1, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
@@ -76,7 +76,7 @@ def main():
         spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world), find_spawn_point_4(world)]
 
         # Shuffle the pool to randomize order
-        # random.shuffle(spawn_point_pool)
+        random.shuffle(spawn_point_pool)
 
         traffic_manager = client.get_trafficmanager()
     
@@ -106,12 +106,12 @@ def main():
         #     for _ in range(1)
         # ]
 
-        # Set spectator to focus on the AI ambulance
-        # if ai_ambulance:
-        #     spectator = world.get_spectator()
-        #     transform = ai_ambulance.get_transform()
-        #     camera_transform = carla.Transform(transform.transform(carla.Location(x=-8, z=3)), transform.rotation)  # Adjust camera position as needed
-        #     spectator.set_transform(camera_transform)
+        #Set spectator to focus on the AI ambulance
+        if ai_ambulance:
+            spectator = world.get_spectator()
+            transform = ai_ambulance.get_transform()
+            camera_transform = carla.Transform(transform.transform(carla.Location(x=-8, z=3)), transform.rotation)  # Adjust camera position as needed
+            spectator.set_transform(camera_transform)
 
         # Apply simple motion primitives only if autopilot is off
         if ai_ambulance and not ai_ambulance_autopilot:
