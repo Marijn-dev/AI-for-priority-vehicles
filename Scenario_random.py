@@ -21,20 +21,26 @@ def setup_pedestrian(world, spawn_point):
     return pedestrian
 
 def find_spawn_point_1(world):
-    spawn_location = carla.Location(x=204.56409912109375, y=-270.99392700195312, z=0.7819424271583557)
+    spawn_location = carla.Location(x=204.56409912109375, y=-278.99392700195312 + random.randrange(-20, 20,2), z=0.7819424271583557)
     spawn_rotation = carla.Rotation(pitch=0, yaw=-88.68557739257812, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_2(world):
-    spawn_location = carla.Location(x=202.4706573486328, y=-328.8112487792969, z=1.1225100755691528)
+    spawn_location = carla.Location(x=202.4706573486328, y=-335.8112487792969 + random.randrange(-20, 20,2), z=1.1225100755691528)
     spawn_rotation = carla.Rotation(pitch=0, yaw=91, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_3(world):
-    spawn_location = carla.Location(x=224.24923706054688, y=-310.7073059082031, z=1.3423326015472412)
+    spawn_location = carla.Location(x=224.24923706054688+random.randrange(-20, 20,2), y=-310.7073059082031, z=1.3423326015472412)
     spawn_rotation = carla.Rotation(pitch=0, yaw=178.68557739257812, roll=0)
+    spawn_transform = carla.Transform(spawn_location, spawn_rotation)
+    return spawn_transform
+
+def find_spawn_point_4(world):
+    spawn_location = carla.Location(x=177.24923706054688+random.randrange(-20, 20,2), y=-307.7073059082031, z=1.3423326015472412)
+    spawn_rotation = carla.Rotation(pitch=-6, yaw=-1.1, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
@@ -52,23 +58,34 @@ def main():
     client.set_timeout(10.0)
     world = client.get_world()
 
-    # Comment sentence below out if running the script for a second time
-    world = client.load_world('Town04')
+    # Comment sentence below out if running the script for a secwond time
+    # world = client.load_world('Town04')w
+    
+    # clean up actors if any are left
+    actors = world.get_actors()
 
+    # Iterate through actors
+    for actor in actors:
+        # Check if actor is a vehicle
+        if actor.type_id.startswith('vehicle'):
+            # Destroy the vehicle
+            actor.destroy()
     try:
         map = world.get_map()
         spawn_points = map.get_spawn_points()
-        spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world)]
+        spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world), find_spawn_point_4(world)]
 
         # Shuffle the pool to randomize order
-        random.shuffle(spawn_point_pool)
+        # random.shuffle(spawn_point_pool)
 
         traffic_manager = client.get_trafficmanager()
     
         # Randomly choose spawn points for each participant
         ai_ambulance_spawn_point = spawn_point_pool.pop()
         ambulance_spawn_point = spawn_point_pool.pop()
-        car_spawn_point = spawn_point_pool.pop()
+        car_spawn_point_1 = spawn_point_pool.pop()
+        car_spawn_point_2 = spawn_point_pool.pop()
+
         pedestrian_spawn_point = find_pedestrian_spawn_point(world)
 
         # Use line below to get coordinates of a spawn point
@@ -80,20 +97,21 @@ def main():
 
         # Spawn regular cars
         car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
-        regular_cars = setup_vehicle(world, random.choice(car_models), car_spawn_point, autopilot=True)
+        regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1, autopilot=True)
+        regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2, autopilot=True)
 
         # Spawn pedestrians
-        pedestrians = [
-            setup_pedestrian(world, pedestrian_spawn_point)
-            for _ in range(1)
-        ]
+        # pedestrians = [
+        #     setup_pedestrian(world, pedestrian_spawn_point)
+        #     for _ in range(1)
+        # ]
 
         # Set spectator to focus on the AI ambulance
-        if ai_ambulance:
-            spectator = world.get_spectator()
-            transform = ai_ambulance.get_transform()
-            camera_transform = carla.Transform(transform.transform(carla.Location(x=-8, z=3)), transform.rotation)  # Adjust camera position as needed
-            spectator.set_transform(camera_transform)
+        # if ai_ambulance:
+        #     spectator = world.get_spectator()
+        #     transform = ai_ambulance.get_transform()
+        #     camera_transform = carla.Transform(transform.transform(carla.Location(x=-8, z=3)), transform.rotation)  # Adjust camera position as needed
+        #     spectator.set_transform(camera_transform)
 
         # Apply simple motion primitives only if autopilot is off
         if ai_ambulance and not ai_ambulance_autopilot:
@@ -105,9 +123,12 @@ def main():
             human_ambulance.apply_control(control)
 
         # Run the scenario for a fixed duration
+        # DATA_COLLECTION = True #
         start_time = time.time()
-        while time.time() - start_time < 20:
-            world.wait_for_tick()  # assuming running in synchronous mode
+        scenario_duration = 5
+        while time.time() - start_time < scenario_duration:
+            print(time.time() - start_time)
+            time.sleep(1)  # assuming running in synchronous mode
 
     finally:
         # Clean up and reset the vehicles and pedestrians
@@ -115,11 +136,13 @@ def main():
             ai_ambulance.destroy()
         if human_ambulance:
             human_ambulance.destroy()
-        if regular_cars:
-            regular_cars.destroy()
-        for pedestrian in pedestrians:
-            if pedestrian:
-                pedestrian.destroy()
+        if regular_cars_1:
+            regular_cars_1.destroy()
+        if regular_cars_2:
+            regular_cars_2.destroy()
+        # for pedestrian in pedestrians:
+        #     if pedestrian:
+        #         pedestrian.destroy()
 
         print("Scenario ended, cleaned up the vehicles and pedestrians.")
 
