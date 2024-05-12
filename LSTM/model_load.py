@@ -51,7 +51,8 @@ if __name__ == '__main__':
     print(rnn_model)
     # Test the model
 
-    TEST_VALUES = True # set to false if you don't want to test values
+    ### PURELY TO TEST VALUES ###
+    TEST_VALUES = False # set to false if you don't want to test values
     if TEST_VALUES:
         ##### LOAD IN DATA ####
         cwd = os.getcwd()
@@ -91,7 +92,7 @@ if __name__ == '__main__':
         dataset = torch.utils.data.TensorDataset(X_tensor,y_tensor)
         val_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size,shuffle=False)
         for i, (past, future) in enumerate(val_loader):  
-            if i == 15:
+            if i == 100:
                 hidden = rnn_model.init_hidden(past)
                 # if i == 21:
                 #     hidden = torch.zeros(2, 2, 20)
