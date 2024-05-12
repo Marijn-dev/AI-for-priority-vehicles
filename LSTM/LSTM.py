@@ -20,7 +20,7 @@ import torch.nn as nn
 cwd = os.getcwd()
 file1 = cwd + '/data/Coordinates_T30_run_1.csv'
 past_timesegments = 5
-future_timesegments = 2
+future_timesegments = 5
 batch_size = 5
 
 X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
@@ -90,7 +90,7 @@ hidden_size = 250  # Size of hidden state (hyperparameter)
 output_size = 2  # Size of output vectors (x and y coordinates)
 num_layers = 3 # amount of layers (hyperparameter)
 learning_rate = 0.0001
-num_epochs = 1
+num_epochs = 18
 
 # Create an instance of the RNN model
 rnn_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
@@ -128,17 +128,17 @@ for epoch in range(num_epochs):
         epoch_loss_val += loss.item()
     print('epoch: {epoch}: train_loss: {epoch_loss_train}, val_loss: {epoch_loss_val}'.format(epoch=epoch+1,epoch_loss_train=epoch_loss_train/len(train_loader),epoch_loss_val=epoch_loss_val/len(val_loader)))
 
-model_scripted = torch.jit.script(rnn_model) # Export to TorchScript
-model_scripted.save('models/RNN_PAST5_FUTURE2.pt') # Save
+# model_scripted = torch.jit.script(rnn_model) # Export to TorchScript
+torch.save(rnn_model,'models/RNN_PAST5_FUTURE5.pt') # Save
 
 
 # Test the model
-# batch = iter(train_loader)
-# X, y = next(batch)
-# with torch.no_grad():
-#     hidden = rnn_model.init_hidden(X)
-#     prediction, _ = rnn_model(X,hidden)
-#     print('Prediction: {prediction}, truth: {y}'.format(prediction=prediction,y=y))
+batch = iter(train_loader)
+X, y = next(batch)
+with torch.no_grad():
+    hidden = rnn_model.init_hidden(X)
+    prediction, _ = rnn_model(X,hidden)
+    print('Prediction: {prediction}, truth: {y}'.format(prediction=prediction,y=y))
 
 #     for i, (past, future) in enumerate(train_loader):  
 #         # # origin shape: [N, 1, 28, 28]
