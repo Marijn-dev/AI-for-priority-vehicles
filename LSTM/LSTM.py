@@ -24,17 +24,18 @@ future_timesegments = 2
 batch_size = 5
 
 X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
-train_val_ratio = 0.75 # ratio train validation
-datalength = 100  # amount of data sets (CSV files) 
+train_val_ratio = 500 # ratio train validation
+datalength = 599  # amount of data sets (CSV files) 
+
 for i in range(1,datalength):
     file = cwd + '/data/Coordinates_T30_run_' + str(i+1)+'.csv'
     X_temp, y_temp = create_data(file1,past_timesegments,future_timesegments)
 
     # train set
-    if i < train_val_ratio*datalength+1:
+    if i < train_val_ratio:
         X_train = np.concatenate((X_train,X_temp),axis=0)
         y_train = np.concatenate((y_train,y_temp),axis=0)
-    elif i == train_val_ratio*datalength+1:
+    elif i == train_val_ratio:
         X_val, y_val = X_temp, y_temp
     else:
         X_val = np.concatenate((X_val,X_temp),axis=0)
@@ -52,6 +53,7 @@ X_tensor, y_tensor = torch.from_numpy(X_val), torch.from_numpy(y_val)
 X_tensor, y_tensor = X_tensor.type(torch.FloatTensor), y_tensor.type(torch.FloatTensor)
 dataset = torch.utils.data.TensorDataset(X_tensor,y_tensor)
 val_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size,shuffle=False)
+
 
 # Define the RNN model
 class SimpleRNN(nn.Module):
@@ -88,15 +90,10 @@ hidden_size = 250  # Size of hidden state (hyperparameter)
 output_size = 2  # Size of output vectors (x and y coordinates)
 num_layers = 3 # amount of layers (hyperparameter)
 learning_rate = 0.0001
-num_epochs = 35
+num_epochs = 1
 
 # Create an instance of the RNN model
 rnn_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
-
-# ### Test output
-# hidden = rnn_model.init_hidden(batch_size)
-# output, _ = rnn_model(X, hidden)
-# print("Output shape:", output.shape)
 
 # Loss and optimizer
 criterion = nn.MSELoss()
@@ -108,14 +105,8 @@ for epoch in range(num_epochs):
     epoch_loss_val = 0
     epoch_loss_train = 0
     for i, (past, future) in enumerate(train_loader):  
-        # # origin shape: [N, 1, 28, 28]
-        # # resized: [N, 28, 28]
-        # images = images.reshape(-1, past_timesegments, input_size)
-        # labels = labels
-        # Forward pass
+       
         hidden = rnn_model.init_hidden(past)
-        # if i == len(train_loader)-1:
-        #     hidden = torch.zeros(2, 2, hidden_size)
         future_pred, _ = rnn_model(past,hidden)
         loss = criterion(future_pred, future)
         epoch_loss_train += loss.item()
@@ -124,7 +115,6 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
         
-    # print('epoch: {epoch}, train_loss: {epoch_loss}'.format(epoch=epoch+1,epoch_loss=epoch_loss_train))
 
     # validation losss
     # with torch.no_grad():
@@ -138,22 +128,26 @@ for epoch in range(num_epochs):
         epoch_loss_val += loss.item()
     print('epoch: {epoch}: train_loss: {epoch_loss_train}, val_loss: {epoch_loss_val}'.format(epoch=epoch+1,epoch_loss_train=epoch_loss_train/len(train_loader),epoch_loss_val=epoch_loss_val/len(val_loader)))
 
-# Test the model
-batch = iter(train_loader)
-X, y = next(batch)
-with torch.no_grad():
-    hidden = rnn_model.init_hidden(X)
-    prediction, _ = rnn_model(X,hidden)
-    print('Prediction: {prediction}, truth: {y}'.format(prediction=prediction,y=y))
+model_scripted = torch.jit.script(rnn_model) # Export to TorchScript
+model_scripted.save('models/RNN_PAST5_FUTURE2.pt') # Save
 
-    # for i, (past, future) in enumerate(train_loader):  
-    #     # # origin shape: [N, 1, 28, 28]
-    #     # # resized: [N, 28, 28]
-    #     # images = images.reshape(-1, past_timesegments, input_size)
-    #     # labels = labels
-    #     # Forward pass
-    #     if i == 10:
-    #         hidden = rnn_model.init_hidden(batch_size)
-    #         # if i == 21:
-    #         #     hidden = torch.zeros(2, 2, 20)
-    #         future_pred, _ = rnn_model(past,hidden)
+
+# Test the model
+# batch = iter(train_loader)
+# X, y = next(batch)
+# with torch.no_grad():
+#     hidden = rnn_model.init_hidden(X)
+#     prediction, _ = rnn_model(X,hidden)
+#     print('Prediction: {prediction}, truth: {y}'.format(prediction=prediction,y=y))
+
+#     for i, (past, future) in enumerate(train_loader):  
+#         # # origin shape: [N, 1, 28, 28]
+#         # # resized: [N, 28, 28]
+#         # images = images.reshape(-1, past_timesegments, input_size)
+#         # labels = labels
+#         # Forward pass
+#         if i == 10:
+#             hidden = rnn_model.init_hidden(batch_size)
+#             # if i == 21:
+#             #     hidden = torch.zeros(2, 2, 20)
+#             future_pred, _ = rnn_model(past,hidden)
