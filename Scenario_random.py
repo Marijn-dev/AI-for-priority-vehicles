@@ -68,8 +68,8 @@ def main():
     world = client.get_world()
 
     # Comment sentence below out if running the script for a secwond time
-    # world = client.load_world('Town04')gg
-    data_runs = 100
+    # world = client.load_world('Town04')
+    data_runs = 500
     for i in range(data_runs):
         # clean up actors if any are left
         actors = world.get_actors()
@@ -140,7 +140,7 @@ def main():
         #     print(time.time() - start_time)
         #     time.sleep(1)  # assuming running in synchronous mode
         scenario_duration = 30
-        csv_file_name = 'Coordinates_T' + str(scenario_duration)+'_run_' + str(i+1) + '.csv'
+        csv_file_name = 'Coordinates_T' + str(scenario_duration)+'_run_' + str(i+100) + '.csv'
         with open('data/'+csv_file_name, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Time', 'Actor Type', 'Actor ID', 'X', 'Y'])
