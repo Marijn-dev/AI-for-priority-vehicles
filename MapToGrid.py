@@ -66,7 +66,7 @@ def map3grid(map, x, z, labels, width, height, cell_size=0.1):
 
 
     # Clear the map for new data
-    map.fill(-10)
+    map.fill(-100)
 
     # Populate the grid
     for xi, zi, cost in zip(x_indices, z_indices, cost_data):

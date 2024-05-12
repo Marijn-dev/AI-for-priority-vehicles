@@ -16,31 +16,70 @@ primitives = [
         {'curvature': 0, 'distance': 20, 'velocity': 0.5},
         {'curvature': 0, 'distance': 20, 'velocity': 0.7},
         {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 2.5, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 2.5, 'distance': 20, 'velocity': 0.5},
+        {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
         {'curvature': 5, 'distance': 10, 'velocity': 0.5},
         {'curvature': 5, 'distance': 10, 'velocity': 0.7},
         {'curvature': 5, 'distance': 20, 'velocity': 0.5},
         {'curvature': 5, 'distance': 20, 'velocity': 0.7},
         {'curvature': 10, 'distance': 10, 'velocity': 0.5},
         {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 10, 'distance': 20, 'velocity': 0.5},
-        {'curvature': 10, 'distance': 20, 'velocity': 0.7},
         {'curvature': 15, 'distance': 10, 'velocity': 0.5},
         {'curvature': 15, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 15, 'distance': 20, 'velocity': 0.5},
-        {'curvature': 15, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -2.5, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -2.5, 'distance': 20, 'velocity': 0.5},
+        {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -5, 'distance': 10, 'velocity': 0.5},
         {'curvature': -5, 'distance': 10, 'velocity': 0.7},
         {'curvature': -5, 'distance': 20, 'velocity': 0.5},
         {'curvature': -5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -10, 'distance': 10, 'velocity': 0.5},
         {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -10, 'distance': 20, 'velocity': 0.5},
-        {'curvature': -10, 'distance': 20, 'velocity': 0.7},
         {'curvature': -15, 'distance': 10, 'velocity': 0.5},
         {'curvature': -15, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -15, 'distance': 20, 'velocity': 0.5},
-        {'curvature': -15, 'distance': 20, 'velocity': 0.7},
     ]
+
+def plot_all_primitives(primitives):
+    plt.figure(figsize=(12, 12))
+    for primitive in primitives:
+        distance = primitive['distance']
+        curvature_deg_per_meter = primitive['curvature']
+
+        if curvature_deg_per_meter == 0:
+            # Straight line
+            y = np.linspace(0, distance, num=300)
+            x = np.zeros_like(y)
+            plt.plot(x, y, label=f'Straight Line: {distance}m, Velocity: {primitive["velocity"]}m/s')
+        else:
+            # Curved path
+            change_in_angle = curvature_deg_per_meter * distance
+            curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
+            radius = 1 / curvature_rad_per_meter
+            start_angle = np.pi  # Start from the top
+            end_angle = start_angle - np.radians(change_in_angle)
+
+            theta = np.linspace(start_angle, end_angle, num=300)
+            x = radius * np.cos(theta) + radius
+            y = radius * np.sin(theta)
+
+            plt.plot(x, y, label=f'Arc: {distance}m, Angle: {change_in_angle}°, Velocity: {primitive["velocity"]}m/s')
+
+        # Start and end points
+        plt.scatter([x[0], x[-1]], [y[0], y[-1]], color='red')
+        plt.text(x[0], y[0], "Start", fontsize=12, ha='center')
+        plt.text(x[-1], y[-1], "End", fontsize=12, ha='center')
+
+    # Labels and grid
+    plt.title('All Motion Primitives')
+    plt.xlabel('X Position (meters)')
+    plt.ylabel('Y Position (meters)')
+    # plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
 
 def dynamic_safety_margin(velocity, base_margin=0.5, velocity_scale=0.8):
     return base_margin + velocity_scale * velocity
@@ -107,13 +146,13 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
 
         # Get costs from costmap
         path_costs = costmap[y_indices, x_indices]
-        print(path_costs)
-        print(str(np.count_nonzero(costmap))+"deze")
+        print("path costs are:"+str(path_costs))
+        print("amount on nonzeroes in the costmap are:"+str(np.count_nonzero(costmap)))
         # average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
-        average_cost = np.sum(path_costs) if len(path_costs) > 0 else np.inf
-        print(average_cost)
-        normalized_cost = (average_cost + dynamic_margin) / distance + penalty
-        print(normalized_cost)
+        summed_cost = np.sum(path_costs) if len(path_costs) > 0 else np.inf
+        print("summed costs are:"+str(summed_cost))
+        normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
+        print("normalized costs are:" + str(normalized_cost))
         costs.append(normalized_cost)
 
     return np.array(costs)
@@ -163,9 +202,6 @@ def plot_best_primitive(distance, curvature_deg_per_meter):
 
     # Show the plot
     plt.show()
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 def draw_motion_primitive_with_buffer(distance, curvature_deg_per_meter, vehicle_width, primitive):
     # Define figure
@@ -324,14 +360,15 @@ def convert_to_vehicle_control(primitive):
     return {'throttle': throttle, 'steer': steer, 'brake': brake}
 
 def main(costmap, cell_size):
+    plot_all_primitives(primitives)
     # Calculate the costs of each primitive on the costmap
     primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
-    print(primitive_costs)
+    print("primitive_costs are:"+str(primitive_costs))
 
     # Select the best primitive
     best_primitive = select_best_primitive(primitive_costs)
     # best_primitive = primitives[0]
-    print(best_primitive)
+    print("best primitive is:"+str(best_primitive))
 
     # Plot the best primitive
     plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
