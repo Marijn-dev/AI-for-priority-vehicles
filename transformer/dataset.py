@@ -9,9 +9,9 @@ class TrajectoryDataset(Dataset):
     def __init__(self, directory, obs_len=5, pred_len=5):
         """
         Args:
-            directory (str): 文件路径
-            obs_len (int): 观察窗口长度
-            pred_len (int): 预测窗口长度
+            directory (str): file path
+            obs_len (int): 
+            pred_len (int):
         """
         self.data = []
         self.obs_len = obs_len
@@ -27,11 +27,11 @@ class TrajectoryDataset(Dataset):
                 self.process_file(df)
 
     def process_file(self, df):
-        # 对每个 Actor_ID 处理数据
-        df = df.sort_values(by=['Actor ID', 'Time'])  # 按 Actor_ID 和 Time 排序
+        # 
+        df = df.sort_values(by=['Actor ID', 'Time'])  #
         for actor_id in df['Actor ID'].unique():
             actor_data = df[df['Actor ID'] == actor_id]
-            # 提取所有可能的时间窗口
+            # 
             num_windows = len(actor_data) - (self.obs_len + self.pred_len) + 1
             for i in range(num_windows):
                 window = actor_data.iloc[i:i+self.obs_len+self.pred_len]
@@ -51,7 +51,7 @@ def get_dataloader(directory, batch_size=32):
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 if __name__ == '__main__':
-    # 指定数据目录
+    # 
     dataloader = get_dataloader(r'C:\5ARIP10\AI-for-priority-vehicles\data')
     for obs_traj, pred_traj in dataloader:
         print(f'Observation: {obs_traj.shape}, Prediction: {pred_traj.shape}')
