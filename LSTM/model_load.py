@@ -32,6 +32,7 @@ if __name__ == '__main__':
             out, hidden = self.rnn_cell(x, hidden)
             out = out[:, -future_timesegments:, :] # --> Last time step 
             out = F.relu(self.fc1(out))
+            # out = self.fc1(out)
             out = self.fc2(out)
             out = self.fc3(out)
             return out, hidden
@@ -39,22 +40,23 @@ if __name__ == '__main__':
         def init_hidden(self, x):
             return torch.zeros(self.num_layers, x.size(0), self.hidden_size)
 
-    future_timesegments = 5 # use this to select which model to use
-    model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
+    future_timesegments = 2 # use this to select which model to use
+    # model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
+    model_name = 'RNN_PAST5_FUTURE2.pt'
     rnn_model = SimpleRNN(2, 250, 2, 3, future_timesegments) # create empty model to load pretrained model in
     rnn_model = torch.load('models/' + model_name)
 
     
 
     ### PURELY TO TEST VALUES AND TO SEE HOW SHAPE OF INPUTS AND OUTPUTS ###
-    TEST_VALUES = True # set to false if you don't want to test values
+    TEST_VALUES = True # set to false if you dongti't want to test values
     if TEST_VALUES:
 
         ##### LOAD IN DATA ####
         cwd = os.getcwd()
         file1 = cwd + '/data/Coordinates_T30_run_1.csv'
         past_timesegments = 5
-        batch_size = 1
+        batch_size = 5
 
         X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
         train_val_ratio = 500 # ratio train validation
@@ -90,8 +92,14 @@ if __name__ == '__main__':
         print(len(val_loader))
         ### PUT SAMPLE THROUGH MODEL ###
         samples = [10,1010,2020,3030,4123,5666,6000] # select random datasamples
+        criterion = nn.MSELoss()
+        cost = 0
         for i, (past, future) in enumerate(val_loader):  
-            if i in samples:
-                hidden = rnn_model.init_hidden(past)
-                future_pred, _ = rnn_model(past,hidden)
-                print('Sample {i}: prediction:{future_pred}, truth:{future}'.format(i=i,future_pred=future_pred,future=future) )
+            hidden = rnn_model.init_hidden(past)
+            future_pred, _ = rnn_model(past,hidden)
+            cost += criterion(future_pred, future)
+            if i in samples: #in samples:
+                print(future_pred)
+                print(future)
+                print(criterion(future_pred, future))
+        print('Cost: {cost}'.format(cost=cost/len(val_loader)))
