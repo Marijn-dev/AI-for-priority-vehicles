@@ -62,6 +62,11 @@ def write_relative_positions(writer, timestamp, actor_type, actors, spawn_points
         writer.writerow([timestamp, actor_type, actor.id, global_x, global_y])
 
 
+def segmentation_callback(image):
+    image.save_to_disk('images/segmentation/%06d.png' % image.frame)
+
+def depth_callback(image):
+    image.save_to_disk('images/depth/%06d.png' % image.frame)
 def main():
     client = carla.Client('localhost', 2000)
     client.set_timeout(10.0)
@@ -115,6 +120,14 @@ def main():
         #     setup_pedestrian(world, pedestrian_spawn_point)
         #     for _ in range(1)
         # ]
+        blueprint_library = world.get_blueprint_library()
+        segmentation_camera_bp = blueprint_library.find('sensor.camera.semantic_segmentation')
+        depth_camera_bp = blueprint_library.find('sensor.camera.depth')
+        camera_transform = carla.Transform(carla.Location(x=2.5, z=1.0))
+        
+        segmentation_camera = world.spawn_actor(segmentation_camera_bp, camera_transform, attach_to=ai_ambulance)
+        depth_camera = world.spawn_actor(depth_camera_bp, camera_transform, attach_to=ai_ambulance)
+        
 
         #Set spectator to focus on the AI ambulance
         if ai_ambulance:
@@ -139,31 +152,33 @@ def main():
         # while time.time() - start_time < scenario_duration:
         #     print(time.time() - start_time)
         #     time.sleep(1)  # assuming running in synchronous mode
-        scenario_duration = 30
-        csv_file_name = 'Coordinates_T' + str(scenario_duration)+'_run_' + str(i+100) + '.csv'
-        with open('data/'+csv_file_name, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Time', 'Actor Type', 'Actor ID', 'X', 'Y'])
+        scenario_duration = 10
+        # csv_file_name = 'Coordinates_T' + str(scenario_duration)+'_run_' + str(i+100) + '.csv'
+        # with open('data/'+csv_file_name, 'w', newline='') as file:
+            # writer = csv.writer(file)
+            # writer.writerow(['Time', 'Actor Type', 'Actor ID', 'X', 'Y'])
 
-            interval = 1
-            steps = 0
+        interval = 1
+        steps = 0
 
-            # print("start period      periods        Error", flush=True)
-            # print(time.time(), flush=True)
+        # print("start period      periods        Error", flush=True)
+        # print(time.time(), flush=True)
 
-            start = time.time()
-            while time.time()-start <= scenario_duration:
-                steps += 1
+        start = time.time()
+        while time.time()-start <= scenario_duration:
+            steps += 1
 
-                time.sleep(interval - 0.2)
+            time.sleep(interval - 0.2)
 
-                while time.time() < (start + interval * steps):
-                    pass
+            while time.time() < (start + interval * steps):
+                pass
 
-                #execute your stuff
-                write_relative_positions(writer, time.time()-start, 'Vehicle',vehicles, spawn_points)
-                # print(time.time(), interval * steps, time.time() - (start + (interval * steps)), flush=True)  # prints the actual interval
-                print(time.time()-start)
+            #execute your stuff
+            segmentation_camera.listen(segmentation_callback)
+            depth_camera.listen(depth_callback)
+            # write_relative_positions(writer, time.time()-start, 'Vehicle',vehicles, spawn_points)
+            # print(time.time(), interval * steps, time.time() - (start + (interval * steps)), flush=True)  # prints the actual interval
+            print(time.time()-start)
 
 
         # finally:
