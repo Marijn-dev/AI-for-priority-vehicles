@@ -1,6 +1,7 @@
 import torch.utils
 import torch.utils.data
 from datapreprocessing import create_data
+import matplotlib.pyplot as plt
 
 import csv
 import os
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         cwd = os.getcwd()
         file1 = cwd + '/data/Coordinates_T30_run_1.csv'
         past_timesegments = 5
-        batch_size = 5
+        batch_size = 1
 
         X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
         train_val_ratio = 500 # ratio train validation
@@ -91,15 +92,49 @@ if __name__ == '__main__':
         val_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size,shuffle=False)
         print(len(val_loader))
         ### PUT SAMPLE THROUGH MODEL ###
-        samples = [10,1010,2020,3030,4123,5666,6000] # select random datasamples
+        samples = [10,1010,2020,3030,4123,5666,6000,3200] # select random datasamples
         criterion = nn.MSELoss()
         cost = 0
+        # Create a figure and a grid of subplots
+        fig, axs = plt.subplots(2, 4)
+
+        # Flatten the 2D array of subplots into a 1D array for easy iteration
+        axs = axs.flatten()
+        cost = np.zeros(len(val_loader))
+        cost_total = 0
         for i, (past, future) in enumerate(val_loader):  
             hidden = rnn_model.init_hidden(past)
             future_pred, _ = rnn_model(past,hidden)
-            cost += criterion(future_pred, future)
-            if i in samples: #in samples:
-                print(future_pred)
-                print(future)
-                print(criterion(future_pred, future))
-        print('Cost: {cost}'.format(cost=cost/len(val_loader)))
+            cost_total += criterion(future_pred, future)
+            cost[i] = criterion(future_pred, future)
+            # for ax in enumerate(axs):
+            #     if i in samples: #in samples:
+            #         future_pred_np = future_pred.detach().numpy()
+            #         future_pred_np_x, future_pred_np_y = future_pred_np[0,:,0], future_pred_np[0,:,1]
+            #         future_np = future.detach().numpy()
+            #         future_np_x, future_np_y = future[0,:,0], future[0,:,1]
+            #         past_np = past.detach().numpy()
+            #         past_np_x, past_np_y = past_np[0,:,0], past_np[0,:,1]
+            #         # Plotting the trajectory
+            #         # plt.figure(figsize=(8, 6))  # Adjust figure size if needed
+            #         ax.plot(future_pred_np_x, future_pred_np_y, marker='o', linestyle='-',label='prediction')
+            #         ax.plot(future_np_x, future_np_y, marker='o', linestyle='-',label='ground truth')
+            #         ax.plot(past_np_x,past_np_y,marker='o', linestyle='-',label='past')
+            #         # Adding labels and title
+            #         ax.xlabel('X-axis')
+            #         ax.ylabel('Y-axis')
+            #         ax.ylim((-10,60))
+            #         ax.xlim((-10,60))
+            #         ax.grid()
+            #         ax.legend()
+            #         ax.title('Trajectory Plot, MSE: {mse}'.format(mse=criterion(future_pred, future)))
+            # plt.tight_layout()
+
+            # plt.show()
+
+        print('Cost: {cost}'.format(cost=cost_total/len(val_loader)))
+        print('Cost: {cost}'.format(cost=np.mean(cost)))
+        print('Cost: {cost}'.format(cost=np.std(cost)))
+
+              
+    # Assuming

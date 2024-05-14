@@ -20,8 +20,8 @@ import torch.nn as nn
 cwd = os.getcwd()
 file1 = cwd + '/data/Coordinates_T30_run_1.csv'
 past_timesegments = 5
-future_timesegments = 5
-batch_size = 1
+future_timesegments = 3
+batch_size = 15
 
 X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
 train_val_ratio = 500 # ratio train validation
@@ -63,9 +63,9 @@ class SimpleRNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.rnn_cell = nn.RNN(input_size, hidden_size,  num_layers, batch_first=True)
-        self.fc1 = nn.Linear(hidden_size, 50)
-        # self.fc2 = nn.Linear(hidden_size, 50)
-        self.fc3 = nn.Linear(50,output_size)
+        self.fc1 = nn.Linear(hidden_size, 150)
+        # self.fc2 = nn.Linear(150, 50)
+        self.fc3 = nn.Linear(150,output_size)
 
 
     def forward(self, x, hidden):
@@ -74,8 +74,8 @@ class SimpleRNN(nn.Module):
         # Reshape the output to fit into the fully connected layer
         # out = out.contiguous().view(-1, self.hidden_size) many to one
         out = out[:, -future_timesegments:, :] # --> Last time step 
-        # out = F.relu(self.fc1(out))
-        out = self.fc1(out)
+        out = F.relu(self.fc1(out))
+        # out = self.fc1(out)
         # out = self.fc2(out)
         out = self.fc3(out)
         # print(out.shape)
@@ -87,11 +87,11 @@ class SimpleRNN(nn.Module):
 
 # Define input, hidden, and output sizes
 input_size = 2  # Size of input vectors (x and y coordinates)
-hidden_size = 120  # Size of hidden state (hyperparameter)
+hidden_size = 350  # Size of hidden state (hyperparameter)
 output_size = 2  # Size of output vectors (x and y coordinates)
-num_layers = 3 # amount of layers (hyperparameter)
-learning_rate = 0.001
-num_epochs = 18
+num_layers = 1 # amount of layers (hyperparameter)
+learning_rate = 0.0008
+num_epochs = 15
 
 # Create an instance of the RNN model
 rnn_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
@@ -130,7 +130,7 @@ for epoch in range(num_epochs):
     print('epoch: {epoch}: train_loss: {epoch_loss_train}, val_loss: {epoch_loss_val}'.format(epoch=epoch+1,epoch_loss_train=epoch_loss_train/len(train_loader),epoch_loss_val=epoch_loss_val/len(val_loader)))
 
 # model_scripted = torch.jit.script(rnn_model) # Export to TorchScript
-torch.save(rnn_model,'models/RNN_PAST5_FUTURE5_V2.pt') # Save
+torch.save(rnn_model,'models/RNN_PAST8_FUTURE3_H350_L1.pt') # Save
 
 
 # Test the model
