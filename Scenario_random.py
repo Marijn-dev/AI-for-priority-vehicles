@@ -1,3 +1,16 @@
+import sys
+import glob
+import os
+
+try:
+    sys.path.append(glob.glob('/home/marijn/Downloads/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+        sys.version_info.major,
+        sys.version_info.minor,
+        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+except IndexError:
+    pass
+
+
 import carla
 import time
 import random
@@ -73,8 +86,8 @@ def main():
     world = client.get_world()
 
     # Comment sentence below out if running the script for a secwond time
-    # world = client.load_world('Town04')
-    data_runs = 500
+    world = client.load_world('Town04')
+    data_runs = 1
     for i in range(data_runs):
         # clean up actors if any are left
         actors = world.get_actors()
@@ -105,7 +118,7 @@ def main():
         # print(f"Location: {spawn_points[172].location.x}, {spawn_points[172].location.y}, {spawn_points[172].location.z}, Rotation: {spawn_points[172].rotation.pitch}, {spawn_points[172].rotation.yaw}, {spawn_points[172].rotation.roll}")
 
         # Spawn two ambulances
-        ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point, autopilot=True, color='255,0,0')
+        ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point, autopilot=True) #color='255,0,0')
         human_ambulance, human_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ambulance_spawn_point, autopilot=True)
 
         # Spawn regular cars
@@ -123,7 +136,7 @@ def main():
         blueprint_library = world.get_blueprint_library()
         segmentation_camera_bp = blueprint_library.find('sensor.camera.semantic_segmentation')
         depth_camera_bp = blueprint_library.find('sensor.camera.depth')
-        camera_transform = carla.Transform(carla.Location(x=2.5, z=1.0))
+        camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
         
         segmentation_camera = world.spawn_actor(segmentation_camera_bp, camera_transform, attach_to=ai_ambulance)
         depth_camera = world.spawn_actor(depth_camera_bp, camera_transform, attach_to=ai_ambulance)
@@ -158,7 +171,7 @@ def main():
             # writer = csv.writer(file)
             # writer.writerow(['Time', 'Actor Type', 'Actor ID', 'X', 'Y'])
 
-        interval = 1
+        interval = 5
         steps = 0
 
         # print("start period      periods        Error", flush=True)
@@ -174,8 +187,10 @@ def main():
                 pass
 
             #execute your stuff
-            segmentation_camera.listen(segmentation_callback)
             depth_camera.listen(depth_callback)
+            segmentation_camera.listen(segmentation_callback)
+            # depth_camera.listen(depth_callback)
+            
             # write_relative_positions(writer, time.time()-start, 'Vehicle',vehicles, spawn_points)
             # print(time.time(), interval * steps, time.time() - (start + (interval * steps)), flush=True)  # prints the actual interval
             print(time.time()-start)
