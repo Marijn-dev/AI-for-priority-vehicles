@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import hsv_to_rgb
+from matplotlib.colors import LinearSegmentedColormap
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap2.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap4.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -17,30 +19,35 @@ primitives = [
         {'curvature': 0, 'distance': 20, 'velocity': 0.7},
         {'curvature': 0, 'distance': 20, 'velocity': 0.9},
         {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 2.5, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 2.5, 'distance': 20, 'velocity': 0.5},
         {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
         {'curvature': 5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 5, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 5, 'distance': 20, 'velocity': 0.5},
         {'curvature': 5, 'distance': 20, 'velocity': 0.7},
         {'curvature': 10, 'distance': 10, 'velocity': 0.5},
         {'curvature': 10, 'distance': 10, 'velocity': 0.7},
         {'curvature': 15, 'distance': 10, 'velocity': 0.5},
         {'curvature': 15, 'distance': 10, 'velocity': 0.7},
         {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -2.5, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -2.5, 'distance': 20, 'velocity': 0.5},
         {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -5, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -5, 'distance': 20, 'velocity': 0.5},
         {'curvature': -5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -10, 'distance': 10, 'velocity': 0.5},
         {'curvature': -10, 'distance': 10, 'velocity': 0.7},
         {'curvature': -15, 'distance': 10, 'velocity': 0.5},
         {'curvature': -15, 'distance': 10, 'velocity': 0.7},
     ]
+
+def generate_random_colors(num_colors):
+    np.random.seed(139)  # For reproducibility
+    colors = np.random.rand(num_colors, 3)  # Generate random colors
+    np.random.shuffle(colors)  # Shuffle to ensure randomness
+    return colors
+
+def plot_color_palette(colors):
+    plt.figure(figsize=(10, 2))
+    plt.imshow([colors], aspect='auto')
+    plt.axis('off')
+    plt.title('256 Randomly Shuffled Unique Colors')
+    plt.show()
 
 def plot_all_primitives(primitives):
     plt.figure(figsize=(12, 12))
@@ -91,34 +98,29 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
     for primitive in primitives:
         curvature_rad_per_meter = np.radians(primitive['curvature'])
         distance = primitive['distance']
-        # Calculate the dynamically adjusted safety margin
         dynamic_margin = dynamic_safety_margin(primitive['velocity'])
-        half_width = (vehicle_width / 2) + dynamic_margin  # Half width including safety margin
-        # Calculate time penalty
+        half_width = (vehicle_width / 2) + dynamic_margin
         penalty = time_penalty(primitive['velocity'])
 
         if primitive['curvature'] != 0:
             radius = 1 / curvature_rad_per_meter
             change_in_angle = distance * curvature_rad_per_meter
-            start_angle = -np.pi/2
+            start_angle = -np.pi / 2
             end_angle = start_angle - change_in_angle
             theta = np.linspace(start_angle, end_angle, num=300)
 
             x_center = (radius * (1 - np.cos(theta))) / cell_size + x_offset
             y_center = (radius * np.sin(theta)) / cell_size + y_offset
 
-            # Adjust for the starting position
             x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
             y_start_adjustment = (radius * (1 - np.sin(start_angle))) / cell_size
             x_center -= x_start_adjustment
             y_center -= y_start_adjustment
 
-            # Calculate perpendicular offsets for safety margins
             perpendicular_width = half_width / cell_size
             dx = -np.sin(theta) / cell_size
             dy = np.cos(theta) / cell_size
 
-            # Normalize the direction vectors
             norm_length = np.sqrt(dx**2 + dy**2)
             dx /= norm_length
             dy /= norm_length
@@ -128,31 +130,48 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             y_left = y_center - dx * perpendicular_width
             y_right = y_center + dx * perpendicular_width
 
-            # Collect all x and y indices for costmap look-up
-            x_indices = np.round(np.concatenate((x_left, x_right)) / cell_size).astype(int)
-            y_indices = np.round(np.concatenate((y_left, y_right)) / cell_size).astype(int)
+            x_indices = np.round(np.concatenate((x_left, x_right))).astype(int)
+            y_indices = np.round(np.concatenate((y_left, y_right))).astype(int)
 
         else:
             x_center = np.linspace(0, distance / cell_size, num=300) + x_offset
             y_center = np.full_like(x_center, y_offset)
 
-            # Straight path buffers
             x_indices = np.round(np.concatenate([x_center for _ in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
             y_indices = np.round(np.concatenate([y_center + i for i in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
 
-        # Ensure indices are within bounds
         x_indices = np.clip(x_indices, 0, costmap.shape[1] - 1)
         y_indices = np.clip(y_indices, 0, costmap.shape[0] - 1)
 
-        # Get costs from costmap
+        # Enhanced debugging output
+        print(f"Primitive: {primitive}")
+        print(f"x_center: {x_center}")
+        print(f"y_center: {y_center}")
+        print(f"x_indices: {x_indices}")
+        print(f"y_indices: {y_indices}")
+
+        # Check if indices are valid
+        if len(x_indices) == 0 or len(y_indices) == 0:
+            print(f"Invalid indices for primitive: {primitive}")
+            costs.append(np.inf)
+            continue
+
+        # Check for index alignment
+        if len(x_indices) != len(y_indices):
+            print(f"Misaligned indices lengths for primitive: {primitive}")
+            costs.append(np.inf)
+            continue
+
         path_costs = costmap[y_indices, x_indices]
-        print("path costs are:"+str(path_costs))
-        print("amount on nonzeroes in the costmap are:"+str(np.count_nonzero(costmap)))
-        # average_cost = np.mean(path_costs) if len(path_costs) > 0 else np.inf
+        print(f"path_costs: {path_costs}")
+        print(f"Non-zero costmap cells: {np.count_nonzero(costmap)}")
+
         summed_cost = np.sum(path_costs) if len(path_costs) > 0 else np.inf
-        print("summed costs are:"+str(summed_cost))
+        print(f"summed_cost: {summed_cost}")
+
         normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
-        print("normalized costs are:" + str(normalized_cost))
+        print(f"normalized_cost: {normalized_cost}")
+
         costs.append(normalized_cost)
 
     return np.array(costs)
@@ -360,7 +379,13 @@ def convert_to_vehicle_control(primitive):
     return {'throttle': throttle, 'steer': steer, 'brake': brake}
 
 def main(costmap, cell_size):
+    num_colors = 256
+    random_colors = generate_random_colors(num_colors)
+    plot_color_palette(random_colors)  
+    random_cmap = LinearSegmentedColormap.from_list("random_cmap", random_colors, N=256)
+
     plot_all_primitives(primitives)
+
     # Calculate the costs of each primitive on the costmap
     primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
     print("primitive_costs are:"+str(primitive_costs))
@@ -370,13 +395,13 @@ def main(costmap, cell_size):
     # best_primitive = primitives[0]
     print("best primitive is:"+str(best_primitive))
 
-    # Plot the best primitive
-    plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
+    # # Plot the best primitive
+    # plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
 
     draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, best_primitive)
 
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.imshow(costmap, cmap='Set3', interpolation='nearest')
+    ax.imshow(costmap, cmap=random_cmap, interpolation='nearest')
     plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600, vehicle_width=2.426)
     # Set limits for the axes
     ax.set_xlim([0, 1000])
