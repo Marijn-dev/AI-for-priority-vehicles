@@ -4,7 +4,7 @@ from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import LinearSegmentedColormap
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap5.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap3.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -12,28 +12,28 @@ y_offset=600
 
 # Generate a set of potential motion primitives
 primitives = [
-        {'curvature': 0, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 0, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 0, 'distance': 10, 'velocity': 0.9},
-        {'curvature': 0, 'distance': 20, 'velocity': 0.5},
+        # {'curvature': 0, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 0, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 0, 'distance': 10, 'velocity': 0.9},
+        # {'curvature': 0, 'distance': 20, 'velocity': 0.5},
         {'curvature': 0, 'distance': 20, 'velocity': 0.7},
-        {'curvature': 0, 'distance': 20, 'velocity': 0.9},
-        {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        # {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
         {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': 5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': -5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 5, 'distance': 20, 'velocity': 0.7},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
+        # {'curvature': -5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -5, 'distance': 20, 'velocity': 0.7},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.7},
     ]
 
 def generate_random_colors(num_colors):
@@ -113,7 +113,7 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             y_center = (radius * np.sin(theta)) / cell_size + y_offset
 
             x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
-            y_start_adjustment = (radius * (1 - np.sin(start_angle))) / cell_size
+            y_start_adjustment = (radius * (np.sin(start_angle))) / cell_size
             x_center -= x_start_adjustment
             y_center -= y_start_adjustment
 
@@ -143,12 +143,11 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
         x_indices = np.clip(x_indices, 0, costmap.shape[1] - 1)
         y_indices = np.clip(y_indices, 0, costmap.shape[0] - 1)
 
-        # Enhanced debugging output
-        print(f"Primitive: {primitive}")
-        print(f"x_center: {x_center}")
-        print(f"y_center: {y_center}")
-        print(f"x_indices: {x_indices}")
-        print(f"y_indices: {y_indices}")
+        # Enhanced debugging output with pairs of coordinates
+        print(f"\nPrimitive: {primitive}")
+        print("Center coordinates (x, y):")
+        for x, y in zip(x_center, y_center):
+            print(f"({x}, {y})")
 
         # Check if indices are valid
         if len(x_indices) == 0 or len(y_indices) == 0:
@@ -163,10 +162,19 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             continue
 
         path_costs = costmap[y_indices, x_indices]
-        print(f"path_costs: {path_costs}")
         print(f"Non-zero costmap cells: {np.count_nonzero(costmap)}")
 
-        summed_cost = np.sum(path_costs) if len(path_costs) > 0 else np.inf
+        # Calculate path costs and print with indices
+        path_costs = costmap[y_indices, x_indices]
+        print("Path costs with indices:")
+        for x, y, cost in zip(x_indices, y_indices, path_costs):
+            print(f"Index (x, y): ({x}, {y}), Cost: {cost}")
+
+        if len(path_costs) == 0:
+            summed_cost = np.inf
+        else:
+            summed_cost = np.sum(path_costs)
+
         print(f"summed_cost: {summed_cost}")
 
         normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
