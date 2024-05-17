@@ -4,7 +4,7 @@ from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import LinearSegmentedColormap
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap4.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap5.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
