@@ -16,36 +16,11 @@ import torch.nn.functional as F
 import torch
 import torch.nn as nn
 
-if __name__ == '__main__':
-    class SimpleRNN(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size, num_layers, future_timesegments):
-            super(SimpleRNN, self).__init__()
-            self.future_timesegments = future_timesegments
-            self.hidden_size = hidden_size
-            self.num_layers = num_layers
-            self.rnn_cell = nn.RNN(input_size, hidden_size,  num_layers, batch_first=True)
-            self.fc1 = nn.Linear(hidden_size, 150)
-            self.fc2 = nn.Linear(150, 50)
-            self.fc3 = nn.Linear(50,output_size)
+def test_model(rnn_model,future_timesegments):
 
-
-        def forward(self, x, hidden):
-            out, hidden = self.rnn_cell(x, hidden)
-            out = out[:, -future_timesegments:, :] # --> Last time step 
-            out = F.relu(self.fc1(out))
-            # out = self.fc1(out)
-            out = self.fc2(out)
-            out = self.fc3(out)
-            return out, hidden
-
-        def init_hidden(self, x):
-            return torch.zeros(self.num_layers, x.size(0), self.hidden_size)
-
-    future_timesegments = 2 # use this to select which model to use
     # model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
-    model_name = 'RNN_PAST5_FUTURE2.pt'
-    rnn_model = SimpleRNN(2, 250, 2, 3, future_timesegments) # create empty model to load pretrained model in
-    rnn_model = torch.load('models/' + model_name)
+    # rnn_model = SimpleRNN(2, hidden_size, 2, num_layers, future_timesegments) # create empty model to load pretrained model in
+    # rnn_model = torch.load('models/' + model_name)
 
     
 
@@ -58,6 +33,7 @@ if __name__ == '__main__':
         file1 = cwd + '/data/Coordinates_T30_run_1.csv'
         past_timesegments = 5
         batch_size = 1
+        
 
         X_train, y_train = create_data(file1,past_timesegments,future_timesegments)
         train_val_ratio = 500 # ratio train validation
@@ -102,9 +78,15 @@ if __name__ == '__main__':
         axs = axs.flatten()
         cost = np.zeros(len(val_loader))
         cost_total = 0
-        for i, (past, future) in enumerate(val_loader):  
+        for i, (past, future) in enumerate(val_loader): 
+            
+                
             hidden = rnn_model.init_hidden(past)
-            future_pred, _ = rnn_model(past,hidden)
+            future_pred, _ = rnn_model(past,hidden,future_timesegments)
+            if i == 10:
+                print('past',past) 
+                # print(future_pred)
+                print('future',future)
             cost_total += criterion(future_pred, future)
             cost[i] = criterion(future_pred, future)
             # for ax in enumerate(axs):
@@ -132,9 +114,34 @@ if __name__ == '__main__':
 
             # plt.show()
 
-        print('Cost: {cost}'.format(cost=cost_total/len(val_loader)))
-        print('Cost: {cost}'.format(cost=np.mean(cost)))
-        print('Cost: {cost}'.format(cost=np.std(cost)))
-
+        print('Mean cost: {cost}'.format(cost=np.mean(cost)))
+        print('Std cost: {cost}'.format(cost=np.std(cost)))
               
-    # Assuming
+def prediction(model,data,future_timesegments):
+    hidden = model.init_hidden(data)
+    future_pred, _ = model(data,hidden,future_timesegments)
+    return future_pred
+
+class SimpleRNN(nn.Module):
+        def __init__(self, input_size, hidden_size, output_size, num_layers, future_timesegments):
+            super(SimpleRNN, self).__init__()
+            self.future_timesegments = future_timesegments
+            self.hidden_size = hidden_size
+            self.num_layers = num_layers
+            self.rnn_cell = nn.RNN(input_size, hidden_size,  num_layers, batch_first=True)
+            self.fc1 = nn.Linear(hidden_size, 150)
+            self.fc2 = nn.Linear(150, 50)
+            self.fc3 = nn.Linear(50,output_size)
+
+
+        def forward(self, x, hidden,future_timesegments):
+            out, hidden = self.rnn_cell(x, hidden)
+            out = out[:, -future_timesegments:, :] # --> Last time step 
+            out = F.relu(self.fc1(out))
+            # out = self.fc1(out)
+            out = self.fc2(out)
+            out = self.fc3(out)
+            return out, hidden
+
+        def init_hidden(self, x):
+            return torch.zeros(self.num_layers, x.size(0), self.hidden_size)
