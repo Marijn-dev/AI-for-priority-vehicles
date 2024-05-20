@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap6.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap8.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -41,6 +42,42 @@ def generate_random_colors(num_colors):
     colors = np.random.rand(num_colors, 3)  # Generate random colors
     np.random.shuffle(colors)  # Shuffle to ensure randomness
     return colors
+
+def create_custom_colormap():
+    colors = [
+        'black',      # unlabeld things (0)
+        'gray',       # roads (1)
+        'lightcyan',        # sidewalks (2)
+        'lemonchiffon',     # buildings (3)
+        'skyblue',       # Wall (4)
+        'green',      # Fence (5)
+        'lightcoral',       # Pole (6)
+        'thistle',    # Traffic Lights (7)
+        'moccasin',     # Traffic Sign (8)
+        'tan',      # Vegetation (9)
+        'palegreen', # Terrain (10)
+        'skyblue',    # Sky (11)
+        'magenta',     # Pedestrian (12)
+        'pink',       # Rider (13)
+        'tomato',    # Cars (14)
+        'cornflowerblue',   # Trucks (15)
+        'darkgreen',  # Busses (16)
+        'gold',       # Train (17)
+        'lightgray',  # motorcycle (18)
+        'darkgray',   # Bicycle (19)
+        'lightblue',  # static objects (20)
+        'darkviolet', # Movable trash bins (21)
+        'lightyellow',# Other (22)
+        'navy',       # Water (23)
+        'lightpink',  # Roadlines (24)
+        'sandybrown',# Ground (25)
+        'teal',       # Bridge (26)
+        'olive',      # rail tracks (27)
+        'mistyrose'      # Guard rail (28)
+    ]
+    
+    cmap = mcolors.ListedColormap(colors[:29])
+    return cmap
 
 def plot_color_palette(colors):
     plt.figure(figsize=(10, 2))
@@ -137,17 +174,24 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             x_center = np.linspace(0, distance / cell_size, num=300) + x_offset
             y_center = np.full_like(x_center, y_offset)
 
-            x_indices = np.round(np.concatenate([x_center for _ in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
-            y_indices = np.round(np.concatenate([y_center + i for i in range(-int(half_width / cell_size), int(half_width / cell_size) + 1)])).astype(int)
+            perpendicular_width = half_width / cell_size
+            x_left = x_center
+            x_right = x_center
+            y_left = y_center + perpendicular_width
+            y_right = y_center - perpendicular_width
+
+            x_indices = np.round(np.concatenate((x_left, x_right))).astype(int)
+            y_indices = np.round(np.concatenate((y_left, y_right))).astype(int)
 
         x_indices = np.clip(x_indices, 0, costmap.shape[1] - 1)
         y_indices = np.clip(y_indices, 0, costmap.shape[0] - 1)
 
         # Enhanced debugging output with pairs of coordinates
         print(f"\nPrimitive: {primitive}")
-        print("Center coordinates (x, y):")
-        for x, y in zip(x_center, y_center):
-            print(f"({x}, {y})")
+
+        # print("Center coordinates (x, y):")
+        # for x, y in zip(x_center, y_center):
+        #     print(f"({x}, {y})")
 
         # Check if indices are valid
         if len(x_indices) == 0 or len(y_indices) == 0:
@@ -161,14 +205,18 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             costs.append(np.inf)
             continue
 
-        path_costs = costmap[y_indices, x_indices]
-        print(f"Non-zero costmap cells: {np.count_nonzero(costmap)}")
+        # print(f"Non-zero costmap cells: {np.count_nonzero(costmap)}")
 
         # Calculate path costs and print with indices
         path_costs = costmap[y_indices, x_indices]
-        print("Path costs with indices:")
-        for x, y, cost in zip(x_indices, y_indices, path_costs):
-            print(f"Index (x, y): ({x}, {y}), Cost: {cost}")
+
+        print("Indices (x, y) and Path costs:")
+        index_cost_pairs = [(x, y, cost) for x, y, cost in zip(x_indices, y_indices, path_costs)]
+        print(index_cost_pairs)
+
+        # print("Path costs with indices:")
+        # for x, y, cost in zip(x_indices, y_indices, path_costs):
+        #     print(f"Index (x, y): ({x}, {y}), Cost: {cost}")
 
         if len(path_costs) == 0:
             summed_cost = np.inf
@@ -176,6 +224,8 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
             summed_cost = np.sum(path_costs)
 
         print(f"summed_cost: {summed_cost}")
+        # print(f"Dynamic margin: {dynamic_margin}")
+        # print(f"Penalty: {penalty}")
 
         normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
         print(f"normalized_cost: {normalized_cost}")
@@ -389,10 +439,11 @@ def convert_to_vehicle_control(primitive):
 def main(costmap, cell_size):
     num_colors = 256
     random_colors = generate_random_colors(num_colors)
-    plot_color_palette(random_colors)  
-    random_cmap = LinearSegmentedColormap.from_list("random_cmap", random_colors, N=256)
+    # plot_color_palette(random_colors)  
+    cmap = LinearSegmentedColormap.from_list("random_cmap", random_colors, N=256)
+    # cmap = create_custom_colormap()
 
-    plot_all_primitives(primitives)
+    # plot_all_primitives(primitives)
 
     # Calculate the costs of each primitive on the costmap
     primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
@@ -409,7 +460,7 @@ def main(costmap, cell_size):
     draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, best_primitive)
 
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.imshow(costmap, cmap=random_cmap, interpolation='nearest')
+    ax.imshow(costmap, cmap=cmap, interpolation='nearest')
     plot_best_primitive_costmap(ax, costmap, best_primitive, cell_size=0.1, x_offset=0 , y_offset=600, vehicle_width=2.426)
     # Set limits for the axes
     ax.set_xlim([0, 1000])
