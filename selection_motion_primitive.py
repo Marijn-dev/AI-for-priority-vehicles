@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap8.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap10.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -43,41 +43,51 @@ def generate_random_colors(num_colors):
     np.random.shuffle(colors)  # Shuffle to ensure randomness
     return colors
 
-def create_custom_colormap():
-    colors = [
-        'black',      # unlabeld things (0)
-        'gray',       # roads (1)
-        'lightcyan',        # sidewalks (2)
-        'lemonchiffon',     # buildings (3)
-        'skyblue',       # Wall (4)
-        'green',      # Fence (5)
-        'lightcoral',       # Pole (6)
-        'thistle',    # Traffic Lights (7)
-        'moccasin',     # Traffic Sign (8)
-        'tan',      # Vegetation (9)
-        'palegreen', # Terrain (10)
-        'skyblue',    # Sky (11)
-        'magenta',     # Pedestrian (12)
-        'pink',       # Rider (13)
-        'tomato',    # Cars (14)
-        'cornflowerblue',   # Trucks (15)
-        'darkgreen',  # Busses (16)
-        'gold',       # Train (17)
-        'lightgray',  # motorcycle (18)
-        'darkgray',   # Bicycle (19)
-        'lightblue',  # static objects (20)
-        'darkviolet', # Movable trash bins (21)
-        'lightyellow',# Other (22)
-        'navy',       # Water (23)
-        'lightpink',  # Roadlines (24)
-        'sandybrown',# Ground (25)
-        'teal',       # Bridge (26)
-        'olive',      # rail tracks (27)
-        'mistyrose'      # Guard rail (28)
-    ]
+# def create_custom_colormap():
+#     colors = [
+#         'black',      # unlabeld things (0)
+#         'gray',       # roads (1)
+#         'lightcyan',        # sidewalks (2)
+#         'lemonchiffon',     # buildings (3)
+#         'skyblue',       # Wall (4)
+#         'green',      # Fence (5)
+#         'lightcoral',       # Pole (6)
+#         'thistle',    # Traffic Lights (7)
+#         'moccasin',     # Traffic Sign (8)
+#         'tan',      # Vegetation (9)
+#         'palegreen', # Terrain (10)
+#         'skyblue',    # Sky (11)
+#         'magenta',     # Pedestrian (12)
+#         'pink',       # Rider (13)
+#         'tomato',    # Cars (14)
+#         'cornflowerblue',   # Trucks (15)
+#         'darkgreen',  # Busses (16)
+#         'gold',       # Train (17)
+#         'lightgray',  # motorcycle (18)
+#         'darkgray',   # Bicycle (19)
+#         'lightblue',  # static objects (20)
+#         'darkviolet', # Movable trash bins (21)
+#         'lightyellow',# Other (22)
+#         'navy',       # Water (23)
+#         'lightpink',  # Roadlines (24)
+#         'sandybrown',# Ground (25)
+#         'teal',       # Bridge (26)
+#         'olive',      # rail tracks (27)
+#         'mistyrose'      # Guard rail (28)
+#     ]
     
-    cmap = mcolors.ListedColormap(colors[:29])
-    return cmap
+#     cmap = mcolors.ListedColormap(colors[:29])
+#     return cmap
+
+# def plot_costmap_with_labels(costmap):
+#     fig, ax = plt.subplots(figsize=(10, 10))
+#     cmap = create_custom_colormap()
+#     ax.imshow(costmap, cmap=cmap, interpolation='nearest')
+#     plt.colorbar(ax.imshow(costmap, cmap=cmap, interpolation='nearest'), ax=ax)
+#     ax.set_xlabel('x (cells)')
+#     ax.set_ylabel('y (cells)')
+#     ax.set_title('Costmap with Labels')
+#     plt.show()
 
 def plot_color_palette(colors):
     plt.figure(figsize=(10, 2))
@@ -210,9 +220,9 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
         # Calculate path costs and print with indices
         path_costs = costmap[y_indices, x_indices]
 
-        print("Indices (x, y) and Path costs:")
-        index_cost_pairs = [(x, y, cost) for x, y, cost in zip(x_indices, y_indices, path_costs)]
-        print(index_cost_pairs)
+        # print("Indices (x, y) and Path costs:")
+        # index_cost_pairs = [(x, y, cost) for x, y, cost in zip(x_indices, y_indices, path_costs)]
+        # print(index_cost_pairs)
 
         # print("Path costs with indices:")
         # for x, y, cost in zip(x_indices, y_indices, path_costs):
@@ -458,6 +468,8 @@ def main(costmap, cell_size):
     # plot_best_primitive(best_primitive['distance'], best_primitive['curvature'])
 
     draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, best_primitive)
+
+    # plot_costmap_with_labels(costmap)
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(costmap, cmap=cmap, interpolation='nearest')

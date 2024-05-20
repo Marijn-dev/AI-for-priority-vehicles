@@ -78,8 +78,8 @@ def map3grid(map, x, z, labels, width, height, cell_size=0.1):
 
 
 def labels2cost(labels):      #for more info on the labels visit: https://carla.readthedocs.io/en/latest/ref_sensors/#instance-segmentation-camera
-    specific_costs = {0:0,    #unlabeld things and things without collissions
-                      1:1,    #roads 
+    specific_costs = {0:1,    #unlabeld things and things without collissions
+                      1:0,    #roads 
                       2:50,   #sidewalks
                       3:255,  #buildings
                       4:254,  #Wall
