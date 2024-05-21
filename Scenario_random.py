@@ -183,8 +183,15 @@ def main():
 
             time.sleep(interval - 0.2)
 
+<<<<<<< Updated upstream
             while time.time() < (start + interval * steps):
                 pass
+=======
+                while time.time() < (start + interval * steps):
+                    pass
+                
+
+>>>>>>> Stashed changes
 
             #execute your stuff
             depth_camera.listen(depth_callback)
