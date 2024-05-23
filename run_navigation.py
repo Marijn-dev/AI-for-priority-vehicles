@@ -11,6 +11,7 @@ import model_load
 import torch
 
 
+
 def get_point_image(point_img,K_inv,Width,Height):
         loc_mat=np.zeros([Height,Width,3])
         static_projection_matrix=np.zeros([Height,Width,3])
@@ -107,7 +108,7 @@ def map2grid(map, x, z, labels, width, height, cell_size=0.1):
 
 
     # Clear the map for new data
-    map.fill(-10)
+    #map.fill(-10)
 
     # Populate the grid
     for xi, zi, cost in zip(x_indices, z_indices, cost_data):
@@ -117,7 +118,7 @@ def map2grid(map, x, z, labels, width, height, cell_size=0.1):
     return map
 
 def trim_active_set(x,z):
-    condition=((x>60) | (x<-60) | (z<0) | (z>120))
+    condition=((x>60) | (x<-60) |(y<1) | (z<0) | (z>120)) #note that the sensor is already on top of the car so the 0,0 point is not at floor level
     x[condition] =0
     #y[condition] =0
     z[condition] =0
@@ -136,11 +137,40 @@ def write_relative_positions(writer, timestamp, actor_type, actors, reference_lo
         relative_y = actor_location.y - reference_location.y
         writer.writerow([timestamp, actor_type, actor.id, relative_x, relative_y])
 
-def get_new_positions(participant):
-    location=participant.get_transform().location
+def get_new_positions(participant,ambulance):
+    location=participant.get_transform().location - ambulance.get_transform.location
     return location[0],location[2]
       
+def create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon):
+    #ASsumes the positions are in the grid size already
+    #create a matrix per timestep M(x,z,t)
+    M=[np.zeros_like(cost_map)]*prediction_horizon
 
+    for p in range(len(participants_labels)):
+        for t in range(len(participants_positions[:,0])):
+            M=place_traffic_participants(t,p,participants_labels,participants_positions,M)
+    return M
+
+   
+   
+   
+
+def place_traffic_participants(t,p,participants_labels,participants_positions,M,cell_multiplier=10):  
+    #Known issue: this places high costs in the corners, fix later as it is not relevant for its function.
+    #coordinates relative to the ego car
+    x_car=int(np.round(participants_positions[t,p*2]*cell_multiplier))
+    z_car=int(np.round(participants_positions[t,p*2+1]*cell_multiplier)+600)
+    
+    if participants_labels[p] =='car':
+        actor_radius = 10 #in gridpoints (assumption assuming gridsize=0.1m)
+    
+    if participants_labels[p] =='pedestrian':
+        actor_radius = 5 #in gridpoints (assumption assuming gridsize=0.1m)
+    
+    for x in range(-actor_radius + x_car,actor_radius + x_car,1):
+        for z in range(-actor_radius + z_car,actor_radius + z_car,1):
+            M[t][x,z]=512
+    return M
 
 def __main__():
     #get image from simulation not from file
@@ -182,15 +212,14 @@ def __main__():
     #add new data to the cost_map
     cost_map = map2grid(cost_map, x, z, labels, map_width, map_height, cell_size)
     #save the points
-    active_set_x.append(x)
-    active_set_y.append(y)
-    active_set_z.append(z)
+
 
     #get data from the other participants
     #load model
     # hidden_size = 250
     # batch_size = 1
     # num_layers = 3
+    past_timefragments=5
     future_timesegments = 2
 
     model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
@@ -201,31 +230,21 @@ def __main__():
     #in vehicle or pedestrian out new data points 
     participants=[] #get these from scenario initialization |carla objects list
     ambulance= [] # define this in the scenario
-    past = np.zeros(2,5) #tensor two coordinates five timeframes
+    past = np.zeros(2,past_timefragments)*len(participants) #tensor two coordinates five timeframes
     hidden=[]
     scenario_duration = 30
-
-    prediction_horizon=5
+    hidden = rnn_model.init_hidden(past)
+    future_pred, _ = rnn_model(past,hidden)
+    prediction_horizon= future_timesegments
     
     #append 
-    previous_ambulance_location = ambulance_location
-    previous_ambulance_rotation = ambulance_rotation
-    ambulance_location = ambulance.get_transform().location
-    ambulance_rotation = ambulance.get_transform().rotation
-
 
     #calculate new position of the vehicle
-    veh_angle = previous_ambulance_rotation[0] #Pitch in carla's coordinate system
-    x_move = np.cos(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) - np.sin(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
-    z_move = np.sin(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) + np.cos(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
-   
-    active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
-    active_set_x,active_set_z=trim_active_set(active_set_x,active_set_z)
+    
     #execute prediction
 
     
-    hidden = rnn_model.init_hidden(past)
-    future_pred, _ = rnn_model(past,hidden)
+    
 
     #create label array and fuse pedestrians to vehicles
 
@@ -235,34 +254,59 @@ def __main__():
         
         #Add new coordinates to the past data
     new_coords=np.zeros(len(participants)*2,0)
-    for p in participants:
-        new_coords[2*p:2*p+1]=get_new_positions(p)
-        past.prepend(new_coords)
-        past=np.delete(past,5,0)
 
-        #get predictions
-        for p in range(participants):
-            input = torch.tensor(past[p*2:p*2+1,:])
-            pred = model_load.prediction(rnn_model,input,future_timesegments)
-            pred.detach().numpy().prepend(participants_positions[2*p:2*p+1,:])
+        
+    ###############################################3###
+    #Loop
+    #locations of ego vehicle and others
+    previous_ambulance_location = ambulance_location
+    previous_ambulance_rotation = ambulance_rotation
+    ambulance_location = ambulance.get_transform().location
+    ambulance_rotation = ambulance.get_transform().rotation
+
+    new_coords=np.zeros(len(participants)*2)
+    for p in range(len(participants)):
+        new_coords[2*p],new_coords[2*p+1]=get_new_positions(p,ambulance)
+    past= np.vstack((new_coords,past))
+    past=np.delete(past,5,0) 
+
+        #transform coordinates to local in the participants views
+    local_par_pos = np.zeros_like(participants_positions)
+    for c in range(len(participants)*2):
+        local_par_pos[2*c,:]= participants_positions[2*c,:]-participants_positions[2*c,4] #subtract the earliest coordinate as the trajectories need to start at 0 for the model
+
+    #ASk marijn if it is relative position that goes into the model. 
+
+    for p in range(len(participants)):
+        input = torch.tensor(past[p*2:p*2+1,:])
+        pred = model_load.prediction(rnn_model,input,future_timesegments)
+        pred.detach().numpy().prepend(participants_positions[2*p:2*p+1,:])
     
-        # sample_input = torch.tensor([[[ 9.9623, 40.1296],
-        #                             [17.9857, 40.0803],
-        #                             [25.6637, 40.1170],
-        #                             [32.3959, 40.1765],
-        #                             [38.2145, 40.2339]]])
-        #apply predictions to the maps
-        collision_map=m2g.create_collision_map(participants_labels,pred,cost_map,prediction_horizon)
-        
-        
 
+    veh_angle = previous_ambulance_rotation-ambulance_rotation[0] #Pitch in carla's coordinate system
+    x_move = np.cos(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) - np.sin(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
+    z_move = np.sin(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) + np.cos(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
+   
+    active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
+    active_set_x,active_set_z=trim_active_set(active_set_x,active_set_z)
 
+    
+    #Take pictures
+    
+    
+    x,y,z = calc_cartesian_image_data(camera_coordinates,depth_data)
+    x,y,z = filter_data(x,y,z)
 
+    active_set_x.append(x)
+    active_set_y.append(y)
+    active_set_z.append(z)
 
-        
-        
-    #Test map
+    cost_map = map2grid(cost_map, x, z, labels, map_width, map_height, cell_size)
+    
+    collision_map=create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon)
 
+    #Calculate costs.
 
+    
 
     
