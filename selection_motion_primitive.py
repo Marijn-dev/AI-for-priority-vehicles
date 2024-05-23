@@ -5,19 +5,25 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap10.npy')
+costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
 y_offset=600
 
+target_coordinates = {
+        'straight': (539, 587),
+        'left': (180, 410),
+        'right': (177, 766)
+    }
+target_direction = 'straight'  # Set the desired direction here
+target = target_coordinates[target_direction]
+
 # Generate a set of potential motion primitives
 primitives = [
         {'curvature': 0, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 0, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 0, 'distance': 10, 'velocity': 0.9},
-        {'curvature': 0, 'distance': 20, 'velocity': 0.5},
-        {'curvature': 0, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.65},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.75},
         {'curvature': 0, 'distance': 20, 'velocity': 0.9},
         {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
         {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
@@ -137,10 +143,31 @@ def plot_all_primitives(primitives):
 
 def dynamic_safety_margin(velocity, base_margin=0.5, velocity_scale=0.8):
     return base_margin + velocity_scale * velocity
+
 def time_penalty(velocity, base_penalty=10.0):
     return base_penalty / (1 + velocity)
 
-def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset, vehicle_width):
+def calculate_gps_cost(final_x, final_y, target_x, target_y):
+    distance = np.sqrt((final_x - target_x)**2 + (final_y - target_y)**2)
+    return distance
+
+def create_collision_map(participants_labels, participants_positions, prediction_horizon, cost_map):
+    M = [np.zeros_like(cost_map) for _ in range(prediction_horizon)]
+    for t in range(prediction_horizon):
+        for p in range(len(participants_labels)):
+            place_traffic_participants(t, participants_labels[p], participants_positions[t][p], M)
+    return M
+
+def place_traffic_participants(t, label, position, M):
+    x_car, y_car = position
+
+    actor_radius = 10 if label == 'car' else 5
+
+    for x in range(max(0, x_car - actor_radius), min(M[t].shape[0], x_car + actor_radius)):
+        for y in range(max(0, y_car - actor_radius), min(M[t].shape[1], y_car + actor_radius)):
+            M[t][x, y] = 512
+
+def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size, x_offset, y_offset, vehicle_width, target):
     costs = []
     for primitive in primitives:
         curvature_rad_per_meter = np.radians(primitive['curvature'])
@@ -148,6 +175,7 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
         dynamic_margin = dynamic_safety_margin(primitive['velocity'])
         half_width = (vehicle_width / 2) + dynamic_margin
         penalty = time_penalty(primitive['velocity'])
+        target_x, target_y = target
 
         if primitive['curvature'] != 0:
             radius = 1 / curvature_rad_per_meter
@@ -240,7 +268,27 @@ def calculate_primitive_costs(costmap, primitives, cell_size, x_offset, y_offset
         normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
         print(f"normalized_cost: {normalized_cost}")
 
-        costs.append(normalized_cost)
+        x_final = x_center[-1]
+        y_final = y_center[-1]
+        gps_cost = calculate_gps_cost(x_final, y_final, target_x, target_y)
+        print(f"Primitive: {primitive}")
+        print(f"Final Point: ({x_final}, {y_final})")
+        print(f"GPS Target: ({target_x}, {target_y})")
+        print(f"GPS Cost: {gps_cost}")
+        
+        collision_cost = 0
+        for t in range(len(predicted_costmaps)):
+            segment_length = len(x_indices) // len(predicted_costmaps)
+            segment_x_indices = x_indices[t * segment_length:(t + 1) * segment_length]
+            segment_y_indices = y_indices[t * segment_length:(t + 1) * segment_length]
+
+            collision_cost += np.sum(predicted_costmaps[t][segment_y_indices, segment_x_indices])
+
+        print(f"Collision cost: {collision_cost}")
+        total_cost = normalized_cost + gps_cost + collision_cost
+        print(f"total_cost: {total_cost}")
+
+        costs.append(total_cost)
 
     return np.array(costs)
 
@@ -428,6 +476,85 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
     ax.set_ylabel('y (cells)')
     ax.legend()
 
+# Define the function to plot segments of the best primitive
+def plot_primitive_segment_on_prediction_costmaps(costmap, predicted_costmaps, primitive, cell_size, x_offset, y_offset, vehicle_width, segment_index):
+    curvature_deg_per_meter = primitive['curvature']
+    distance = primitive['distance']
+    curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
+    dynamic_margin = dynamic_safety_margin(primitive['velocity'])
+    half_width = (vehicle_width / 2) + dynamic_margin  # Half width including safety margin
+
+    if curvature_deg_per_meter != 0:
+        radius = 1 / curvature_rad_per_meter
+        change_in_angle = distance * curvature_rad_per_meter
+        start_angle = -np.pi / 2
+        end_angle = start_angle - change_in_angle
+        theta = np.linspace(start_angle, end_angle, num=300)
+
+        x_center = (radius * (1 - np.cos(theta))) / cell_size + x_offset
+        y_center = (radius * np.sin(theta)) / cell_size + y_offset
+
+        x_start_adjustment = (radius * (1 - np.cos(start_angle))) / cell_size
+        y_start_adjustment = (radius * (np.sin(start_angle))) / cell_size
+        x_center -= x_start_adjustment
+        y_center -= y_start_adjustment
+
+        perpendicular_width = half_width / cell_size
+        dx = np.sin(theta) / cell_size
+        dy = np.cos(theta) / cell_size
+
+        norm_length = np.sqrt(dx**2 + dy**2)
+        dx /= norm_length
+        dy /= norm_length
+
+        x_left = x_center + dy * perpendicular_width
+        x_right = x_center - dy * perpendicular_width
+        y_left = y_center - dx * perpendicular_width
+        y_right = y_center + dx * perpendicular_width
+
+        x_safety_left = x_left + dy * (dynamic_margin / cell_size)
+        y_safety_left = y_left - dx * (dynamic_margin / cell_size)
+        x_safety_right = x_right - dy * (dynamic_margin / cell_size)
+        y_safety_right = y_right + dx * (dynamic_margin / cell_size)
+
+    else:
+        x_center = np.linspace(0, distance / cell_size, num=300) + x_offset
+        y_center = np.full_like(x_center, y_offset)
+
+        perpendicular_width = half_width / cell_size
+        safety_margin_cells = dynamic_margin / cell_size
+
+        x_left = x_center
+        x_right = x_center
+        y_left = y_center + perpendicular_width
+        y_right = y_center - perpendicular_width
+
+        x_safety_left = y_left + safety_margin_cells
+        y_safety_left = y_left + safety_margin_cells
+        x_safety_right = y_right - safety_margin_cells
+        y_safety_right = y_right - safety_margin_cells
+
+    # Segment indices
+    segment_length = 300 // len(predicted_costmaps)
+    start_idx = segment_index * segment_length
+    end_idx = start_idx + segment_length
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.imshow(predicted_costmaps[segment_index], cmap=cmap, interpolation='nearest')
+    ax.plot(x_center[start_idx:end_idx], y_center[start_idx:end_idx], 'b-', label='Motion Primitive')
+    ax.plot(x_left[start_idx:end_idx], y_left[start_idx:end_idx], 'r--', label='Left Buffer')
+    ax.plot(x_right[start_idx:end_idx], y_right[start_idx:end_idx], 'r--', label='Right Buffer')
+    ax.plot(x_safety_left[start_idx:end_idx], y_safety_left[start_idx:end_idx], 'g--', label='Left Safety Margin')
+    ax.plot(x_safety_right[start_idx:end_idx], y_safety_right[start_idx:end_idx], 'g--', label='Right Safety Margin')
+    ax.set_xlim([0, 1000])
+    ax.set_ylim([800, 400])
+    ax.set_xlabel('x (cells)')
+    ax.set_ylabel('y (cells)')
+    ax.legend()
+    ax.set_title(f'Primitive Segment on Predicted Costmap {segment_index}')
+    plt.show()
+
 def convert_to_vehicle_control(primitive):
     """
     Converts a motion primitive into VehicleControl settings for CARLA.
@@ -446,7 +573,7 @@ def convert_to_vehicle_control(primitive):
     
     return {'throttle': throttle, 'steer': steer, 'brake': brake}
 
-def main(costmap, cell_size):
+def main(costmap, predicted_costmaps, cell_size, target):
     num_colors = 256
     random_colors = generate_random_colors(num_colors)
     # plot_color_palette(random_colors)  
@@ -456,7 +583,7 @@ def main(costmap, cell_size):
     # plot_all_primitives(primitives)
 
     # Calculate the costs of each primitive on the costmap
-    primitive_costs = calculate_primitive_costs(costmap, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426)
+    primitive_costs = calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size=0.1, x_offset=0, y_offset=600, vehicle_width=2.426, target=target)
     print("primitive_costs are:"+str(primitive_costs))
 
     # Select the best primitive
@@ -470,6 +597,8 @@ def main(costmap, cell_size):
     draw_motion_primitive_with_buffer(best_primitive['distance'], best_primitive['curvature'], 2.426, best_primitive)
 
     # plot_costmap_with_labels(costmap)
+
+    # create_collision_map(participants_labels=['car', 'pedestrian'],participants_positions=participants_positions,time_step=1,ego_position=(0,0),cost_map=costmap,prediction_horizon=2)
 
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(costmap, cmap=cmap, interpolation='nearest')
@@ -485,6 +614,42 @@ def main(costmap, cell_size):
     return control['throttle'], control['steer'], control['brake']
 
 if __name__ == "__main__":
-    cell_size = 0.1  # Size of the cells in meters (example value)
-    throttle, steer, brake = main(costmap, cell_size)
+    cell_size = 0.1  # Size of the cells in meters (example value)# Set the target coordinates for 'straight', 'left', and 'right'
+    num_colors = 256
+    random_colors = generate_random_colors(num_colors)
+    cmap = LinearSegmentedColormap.from_list("random_cmap", random_colors, N=256)
+    prediction_horizon = 5
+    participants_labels = ['car1', 'car2']
+    participants_positions = [  # Positions at each timestep, x and y are swapped for some reason
+        [[195, 547], [258, 628]],
+        [[172, 551], [258, 609]],
+        [[149, 555], [258, 590]],
+        [[126, 559], [258, 571]],
+        [[103, 563], [258, 552]]
+    ]
+    # Swap the x and y values
+    swapped_positions = [[[pos[1], pos[0]] for pos in timestep] for timestep in participants_positions]
+
+    predicted_costmaps = create_collision_map(participants_labels, swapped_positions, prediction_horizon, costmap)
+    # # Print and visualize predicted costmaps for debugging
+    # for t, predicted_costmap in enumerate(predicted_costmaps):
+    #     print(f"Predicted costmap at timestep {t}:")
+    #     print(predicted_costmap)
+    #     plt.figure(figsize=(10, 10))
+    #     plt.imshow(predicted_costmap, cmap=cmap, interpolation='nearest')
+    #     plt.xlim(0,1000)
+    #     plt.ylim(800,400)
+    #     plt.title(f"Predicted costmap at timestep {t}")
+    #     plt.colorbar()
+    #     plt.show()
+
+    primitive_costs = calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size, x_offset, y_offset, 2.426, target)
+    best_primitive = select_best_primitive(primitive_costs)
+    print("best primitive is:", best_primitive)
+
+    # Plot the segments
+    for segment_index in range(prediction_horizon):
+        plot_primitive_segment_on_prediction_costmaps(costmap, predicted_costmaps, best_primitive, cell_size, x_offset, y_offset, 2.426, segment_index)
+
+    throttle, steer, brake = main(costmap, predicted_costmaps, cell_size, target)
     print(f"Throttle: {throttle}, Steer: {steer}, Brake: {brake}")
