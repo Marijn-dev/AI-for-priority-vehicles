@@ -4,6 +4,10 @@ import numpy as np
 #import pygame
 import cv2
 import time
+try:
+   import queue
+except ImportError:
+   import Queue as queue
 
 
 def camera_callback(image, data):
@@ -48,6 +52,8 @@ depth_camera_bp= blueprint_library.find('sensor.camera.depth')
 camera_init_trans = carla.Transform(carla.Location(z=1.5)) 
 depth_camera = world.try_spawn_actor(depth_camera_bp, camera_init_trans, attach_to=ego_vehicle)
 
+depth_image_queue = queue.Queue()
+instance_image_queue = queue.Queue()
 
 #Create a loop to allow the user to take pictures
 try:
