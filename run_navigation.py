@@ -9,7 +9,9 @@ import LSTM as lstm
 from model_load import SimpleRNN
 import model_load
 import torch
+import carla
 
+import scenario_setup as scene
 
 
 def get_point_image(point_img,K_inv,Width,Height):
@@ -172,14 +174,13 @@ def place_traffic_participants(t,p,participants_labels,participants_positions,M,
             M[t][x,z]=512
     return M
 
-def __main__():
-    #get image from simulation not from file
-    client = carla.Client('localhost', 2000)
-    client.set_timeout(120) #Enable longer wait time in case computer is slow
 
-    world = client.get_world()
+
+def __main__():    
 
     #Run scenario and import knowledge from carla.
+    ambulance, participants, participants_labels =scene.scenario_setup()
+
 
     depth_data=plt.imread('Rubens test files/Pictures/depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     segment_data=plt.imread('Rubens test files/Pictures/instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
@@ -228,85 +229,84 @@ def __main__():
     #gather data from carla
     #initialize
     #in vehicle or pedestrian out new data points 
-    participants=[] #get these from scenario initialization |carla objects list
-    ambulance= [] # define this in the scenario
-    past = np.zeros(2,past_timefragments)*len(participants) #tensor two coordinates five timeframes
+    past = np.zeros([2,past_timefragments*participants])
     hidden=[]
     scenario_duration = 30
     hidden = rnn_model.init_hidden(past)
     future_pred, _ = rnn_model(past,hidden)
     prediction_horizon= future_timesegments
     
-    #append 
-
-    #calculate new position of the vehicle
-    
-    #execute prediction
-
-    
-    
-
-    #create label array and fuse pedestrians to vehicles
-
-    participants_labels=[todo]
-    participants_positions=[todo]
-    #make a collission map
+    ambulance, participants_labels,participants=scene.start_scenario()
+    i=0
+    participants_positions=[]*len(participants)
+    for p in participants:
+        participants_positions[i]=p.location
+        i+=1
         
-        #Add new coordinates to the past data
-    new_coords=np.zeros(len(participants)*2,0)
-
-        
-    ###############################################3###
+    ##################################################
     #Loop
-    #locations of ego vehicle and others
-    previous_ambulance_location = ambulance_location
-    previous_ambulance_rotation = ambulance_rotation
-    ambulance_location = ambulance.get_transform().location
-    ambulance_rotation = ambulance.get_transform().rotation
+    i_time_steps=0
+    step_time=0.5
+    n_steps=30
+    start_time = time.time()
+    start = time.time()
+    while time.time()-start <= n_steps*step_time:
+        i_time_steps += 1
 
-    new_coords=np.zeros(len(participants)*2)
-    for p in range(len(participants)):
-        new_coords[2*p],new_coords[2*p+1]=get_new_positions(p,ambulance)
-    past= np.vstack((new_coords,past))
-    past=np.delete(past,5,0) 
+        time.sleep(step_time - 0.2)
 
-        #transform coordinates to local in the participants views
-    local_par_pos = np.zeros_like(participants_positions)
-    for c in range(len(participants)*2):
-        local_par_pos[2*c,:]= participants_positions[2*c,:]-participants_positions[2*c,4] #subtract the earliest coordinate as the trajectories need to start at 0 for the model
+        while time.time() < (start + step_time * i_time_steps):
+            pass
 
-    #ASk marijn if it is relative position that goes into the model. 
+        previous_ambulance_location = ambulance_location
+        previous_ambulance_rotation = ambulance_rotation
+        ambulance_location = ambulance.get_transform().location
+        ambulance_rotation = ambulance.get_transform().rotation
 
-    for p in range(len(participants)):
-        input = torch.tensor(past[p*2:p*2+1,:])
-        pred = model_load.prediction(rnn_model,input,future_timesegments)
-        pred.detach().numpy().prepend(participants_positions[2*p:2*p+1,:])
+        new_coords=np.zeros(len(participants)*2)
+        for p in range(len(participants)):
+            new_coords[2*p],new_coords[2*p+1]=get_new_positions(p,ambulance)
+        past= np.vstack((new_coords,past))
+        past=np.delete(past,5,0) 
+
+            #transform coordinates to local in the participants views
+        local_par_pos = np.zeros_like(participants_positions)
+        for c in range(len(participants)*2):
+            local_par_pos[2*c,:]= participants_positions[2*c,:]-participants_positions[2*c,4] #subtract the earliest coordinate as the trajectories need to start at 0 for the model
+
+        #ASk marijn if it is relative position that goes into the model. 
+
+        for p in range(len(participants)):
+            input = torch.tensor(past[p*2:p*2+1,:])
+            pred = model_load.prediction(rnn_model,input,future_timesegments)
+            pred.detach().numpy().prepend(participants_positions[2*p:2*p+1,:])
+        
+
+        veh_angle = previous_ambulance_rotation-ambulance_rotation[0] #Pitch in carla's coordinate system
+        x_move = np.cos(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) - np.sin(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
+        z_move = np.sin(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) + np.cos(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
     
+        active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
+        active_set_x,active_set_z=trim_active_set(active_set_x,active_set_z)
 
-    veh_angle = previous_ambulance_rotation-ambulance_rotation[0] #Pitch in carla's coordinate system
-    x_move = np.cos(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) - np.sin(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
-    z_move = np.sin(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) + np.cos(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
-   
-    active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
-    active_set_x,active_set_z=trim_active_set(active_set_x,active_set_z)
+        
+        #Take pictures
+        
+        
+        x,y,z = calc_cartesian_image_data(camera_coordinates,depth_data)
+        x,y,z = filter_data(x,y,z)
 
-    
-    #Take pictures
-    
-    
-    x,y,z = calc_cartesian_image_data(camera_coordinates,depth_data)
-    x,y,z = filter_data(x,y,z)
+        active_set_x.append(x)
+        active_set_y.append(y)
+        active_set_z.append(z)
 
-    active_set_x.append(x)
-    active_set_y.append(y)
-    active_set_z.append(z)
+        cost_map = map2grid(cost_map, x, z, labels, map_width, map_height, cell_size)
+        
+        collision_map=create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon)
 
-    cost_map = map2grid(cost_map, x, z, labels, map_width, map_height, cell_size)
-    
-    collision_map=create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon)
+        #Calculate costs
 
-    #Calculate costs.
 
-    
+        
 
     
