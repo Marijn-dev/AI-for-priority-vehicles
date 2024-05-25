@@ -122,26 +122,48 @@ def prediction(model,data,future_timesegments):
     future_pred, _ = model(data,hidden,future_timesegments)
     return future_pred
 
+# Define the RNN model
 class SimpleRNN(nn.Module):
-        def __init__(self, input_size, hidden_size, output_size, num_layers, future_timesegments):
-            super(SimpleRNN, self).__init__()
-            self.future_timesegments = future_timesegments
-            self.hidden_size = hidden_size
-            self.num_layers = num_layers
-            self.rnn_cell = nn.RNN(input_size, hidden_size,  num_layers, batch_first=True)
-            self.fc1 = nn.Linear(hidden_size, 150)
-            self.fc2 = nn.Linear(150, 50)
-            self.fc3 = nn.Linear(50,output_size)
+    def __init__(self, input_size, hidden_size, output_size, num_layers, future_timesegments):
+        super(SimpleRNN, self).__init__()
+        self.future_timesegments = future_timesegments
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.rnn_cell = nn.RNN(input_size, hidden_size,  num_layers, batch_first=True)
+        self.fc1 = nn.Linear(hidden_size, 100)
+        # self.fc2 = nn.Linear(100, 50)
+        self.fc3 = nn.Linear(100,output_size)
 
 
-        def forward(self, x, hidden,future_timesegments):
-            out, hidden = self.rnn_cell(x, hidden)
-            out = out[:, -future_timesegments:, :] # --> Last time step 
-            out = F.relu(self.fc1(out))
-            # out = self.fc1(out)
-            out = self.fc2(out)
-            out = self.fc3(out)
-            return out, hidden
+    def forward(self, x, hidden):
+        # Forward pass through the RNN layer
+        out, hidden = self.rnn_cell(x, hidden)
+        # Reshape the output to fit into the fully connected layer
+        # out = out.contiguous().view(-1, self.hidden_size) many to one
+        out = out[:, -future_timesegments:, :] # --> Last time step 
+        out = F.relu(self.fc1(out))
+        # out = self.fc1(out)
+        # out = self.fc2(out)
+        out = self.fc3(out)
+        # print(out.shape)
+        return out, hidden
 
-        def init_hidden(self, x):
-            return torch.zeros(self.num_layers, x.size(0), self.hidden_size)
+    def init_hidden(self, x):
+        # Initialize hidden state with zeros
+        return torch.zeros(self.num_layers, x.size(0), self.hidden_size)
+
+if __name__== "__main__":
+    # Define input, hidden, and output sizes
+    input_size = 2  # Size of input vectors (x and y coordinates)
+    hidden_size = 150  # Size of hidden state (hyperparameter)
+    output_size = 2  # Size of output vectors (x and y coordinates)
+    num_layers = 2# amount of layers (hyperparameter)
+    future_timesegments = 4
+    model_name = 'RNN_PAST5_FUTURE5_H150_L2'
+
+    # Create an instance of the RNN model
+    rnn_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
+    rnn_model = torch.load('/RNN_MODELS/' + model_name)
+    test_model(rnn_model,future_timesegments=5)
+
+    
