@@ -1,5 +1,6 @@
 import carla
 import random
+import time
 
 
 def find_spawn_point_1(world):
@@ -40,11 +41,17 @@ def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
 
 def scenario_setup():
     client = carla.Client('localhost', 2000)
-    client.set_timeout(10.0)
+    client.set_timeout(120.0)
     world = client.get_world()
 
-
-    ap = world.get_map()
+   
+    if world.get_map().name =="Carla/Maps/Town10HD_Opt":
+        world = client.load_world('Town04')
+    actor_list = world.get_actors()
+    for a in actor_list: #removes old actors so you can just run the script again and again
+        if a.id>146:
+            a.destroy()
+    
     spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world), find_spawn_point_4(world)]
 
     ai_ambulance_spawn_point = spawn_point_pool.pop()
@@ -53,9 +60,9 @@ def scenario_setup():
     car_spawn_point_2 = spawn_point_pool.pop()
 
     car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
-    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1, autopilot=True)
-    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2, autopilot=True)
-
+    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1)
+    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2)
+    
 
     ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point)
     participants = [regular_cars_1,regular_cars_2]

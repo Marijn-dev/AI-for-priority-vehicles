@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
+#costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -225,7 +225,7 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         y_indices = np.clip(y_indices, 0, costmap.shape[0] - 1)
 
         # Enhanced debugging output with pairs of coordinates
-        print(f"\nPrimitive: {primitive}")
+        
 
         # print("Center coordinates (x, y):")
         # for x, y in zip(x_center, y_center):
@@ -261,20 +261,15 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         else:
             summed_cost = np.sum(path_costs)
 
-        print(f"summed_cost: {summed_cost}")
+        
         # print(f"Dynamic margin: {dynamic_margin}")
         # print(f"Penalty: {penalty}")
 
         normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
-        print(f"normalized_cost: {normalized_cost}")
 
         x_final = x_center[-1]
         y_final = y_center[-1]
         gps_cost = calculate_gps_cost(x_final, y_final, target_x, target_y)
-        print(f"Primitive: {primitive}")
-        print(f"Final Point: ({x_final}, {y_final})")
-        print(f"GPS Target: ({target_x}, {target_y})")
-        print(f"GPS Cost: {gps_cost}")
         
         collision_cost = 0
         for t in range(len(predicted_costmaps)):
@@ -284,9 +279,8 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 
             collision_cost += np.sum(predicted_costmaps[t][segment_y_indices, segment_x_indices])
 
-        print(f"Collision cost: {collision_cost}")
         total_cost = normalized_cost + gps_cost + collision_cost
-        print(f"total_cost: {total_cost}")
+
 
         costs.append(total_cost)
 
@@ -295,6 +289,7 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 def select_best_primitive(primitive_costs):
     # Function to select the primitive with the lowest cost
     min_cost_index = np.argmin(primitive_costs)
+    
     return primitives[min_cost_index]
 
 def plot_best_primitive(distance, curvature_deg_per_meter):
@@ -571,7 +566,8 @@ def convert_to_vehicle_control(primitive):
     steer = np.clip(primitive['curvature'] / 17.5, -1, 1)  # Normalize and limit steer value
     brake = 0  # No braking in these examples
     
-    return {'throttle': throttle, 'steer': steer, 'brake': brake}
+    return throttle,steer,brake
+    #return {'throttle': throttle, 'steer': steer, 'brake': brake}
 
 def main(costmap, predicted_costmaps, cell_size, target):
     num_colors = 256

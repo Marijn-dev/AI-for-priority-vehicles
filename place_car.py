@@ -26,7 +26,7 @@ while inp != "exit":
 
     if inp== 'p':
         spec_trans=spectator.get_transform()
-        print('x='+ str(spec_trans.location.x)+' y='+str(spec_trans.location.y)+' z='+str(spec_trans.location.z))
+        print('x='+ str(spec_trans.location.x)+' y='+str(spec_trans.location.y)+' z='+str(spec_trans.location.z)+str(spec_trans.rotation))
 
     if inp == '@':
         point=spectator.get_transform()

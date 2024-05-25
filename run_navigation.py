@@ -6,12 +6,15 @@ import csv
 import time
 import MapToGrid as m2g
 import LSTM as lstm
-from model_load import SimpleRNN
-import model_load
+
 import torch
+
 import carla
 
+import model_load
+from model_load import SimpleRNN
 import scenario_setup as scene
+import selection_motion_primitive as mp
 
 
 def get_point_image(point_img,K_inv,Width,Height):
@@ -28,8 +31,9 @@ def convert_image_to_depth(image_data):
     G=image_data[:,:,1]
     B=image_data[:,:,2]
 
-    scale_factor=100
+    scale_factor=256
     normalized = ((R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1))*1000*scale_factor
+    return normalized
 
 def define_camera_matrix():
     fov = 90
@@ -119,12 +123,13 @@ def map2grid(map, x, z, labels, width, height, cell_size=0.1):
 
     return map
 
-def trim_active_set(x,z):
+def trim_active_set(x,y,z):
+    y=np.array(y)
     condition=((x>60) | (x<-60) |(y<1) | (z<0) | (z>120)) #note that the sensor is already on top of the car so the 0,0 point is not at floor level
-    x[condition] =0
-    #y[condition] =0
-    z[condition] =0
-    return x,z
+    x[condition]=0
+    y[condition]=0
+    z[condition]=0
+    return x,y,z
 
 def translate_active_set(x_data,z_data,x_move,z_move,theta):
     #rotation of a frame just along the y axis https://nl.mathworks.com/help/fusion/gs/spatial-representation-coordinate-systems-and-conventions.html
@@ -140,8 +145,11 @@ def write_relative_positions(writer, timestamp, actor_type, actors, reference_lo
         writer.writerow([timestamp, actor_type, actor.id, relative_x, relative_y])
 
 def get_new_positions(participant,ambulance):
-    location=participant.get_transform().location - ambulance.get_transform.location
-    return location[0],location[2]
+    location=participant.get_transform().location - ambulance.get_transform().location
+    theta=ambulance.get_transform().rotation.yaw
+    location.x= (location.x)*np.cos(theta) + (location.x)*-np.sin(theta)
+    location.z= (location.x)*np.sin(theta) + (location.z)*np.cos(theta)
+    return location.x,location.z
       
 def create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon):
     #ASsumes the positions are in the grid size already
@@ -174,24 +182,52 @@ def place_traffic_participants(t,p,participants_labels,participants_positions,M,
             M[t][x,z]=512
     return M
 
+def get_primitives():
+    primitives = [
+        {'curvature': 0, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.65},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.75},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+    ]
+    return primitives
 
 
-def __main__():    
 
+def main():   
+    should_print=True 
     #Run scenario and import knowledge from carla.
+    
+
     ambulance, participants, participants_labels =scene.scenario_setup()
+    ambulance_location=ambulance.get_transform().location
+    ambulance_rotation=ambulance.get_transform().rotation 
+    target=[0,100] #specifiy where the ambulance needs to go 
 
-
-    depth_data=plt.imread('Rubens test files/Pictures/depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
-    segment_data=plt.imread('Rubens test files/Pictures/instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     
     depth_data=convert_image_to_depth(depth_data)
     segment_data=np.round(segment_data*255)
     labels=segment_data[:,:,0]
-
-    depth_Width=depth_data[1,:,0].size
-    depth_Height=depth_data[:,1,0].size
-
+   
+    depth_Width=len(depth_data[1,:])
+    depth_Height=len(depth_data[:,1])
     
     K_inv=define_camera_matrix()
     camera_coordinates=get_point_image(depth_data,K_inv,depth_Width,depth_Height)
@@ -203,10 +239,12 @@ def __main__():
     map_width=120 #meters
     map_height=240 #meters
     cell_size=0.1 #meters
+    
 
     active_set_x=[]
     active_set_y=[]
     active_set_z=[]
+
     cost_map=np.zeros([int(map_width/cell_size),int(map_height/cell_size)])
 
     #split into loop
@@ -222,26 +260,27 @@ def __main__():
     # num_layers = 3
     past_timefragments=5
     future_timesegments = 2
-
     model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
-    rnn_model = torch.load('models/' + model_name)
+    rnn_model = torch.load('AI-for-priority-vehicles/models/' + model_name)
 
     #gather data from carla
     #initialize
     #in vehicle or pedestrian out new data points 
-    past = np.zeros([2,past_timefragments*participants])
+    past = np.zeros([past_timefragments,2*len(participants)])
     hidden=[]
     scenario_duration = 30
-    hidden = rnn_model.init_hidden(past)
-    future_pred, _ = rnn_model(past,hidden)
     prediction_horizon= future_timesegments
     
-    ambulance, participants_labels,participants=scene.start_scenario()
-    i=0
-    participants_positions=[]*len(participants)
-    for p in participants:
-        participants_positions[i]=p.location
-        i+=1
+    # participants_positions=np.zeros(len(participants)*2)
+    # i=0
+    # for p in participants:
+    #     participants_positions[2*i] =p.get_transform().location.x
+    #     participants_positions[2*i+1] = p.get_transform().location.z
+    #     i+=1
+    
+
+        
+
         
     ##################################################
     #Loop
@@ -265,29 +304,26 @@ def __main__():
 
         new_coords=np.zeros(len(participants)*2)
         for p in range(len(participants)):
-            new_coords[2*p],new_coords[2*p+1]=get_new_positions(p,ambulance)
-        past= np.vstack((new_coords,past))
-        past=np.delete(past,5,0) 
-
+            new_coords[2*p],new_coords[2*p+1]=get_new_positions(participants[p],ambulance)
+        past= np.vstack((past,new_coords))
+        past= np.delete(past,0,0) 
             #transform coordinates to local in the participants views
-        local_par_pos = np.zeros_like(participants_positions)
-        for c in range(len(participants)*2):
-            local_par_pos[2*c,:]= participants_positions[2*c,:]-participants_positions[2*c,4] #subtract the earliest coordinate as the trajectories need to start at 0 for the model
-
-        #ASk marijn if it is relative position that goes into the model. 
-
-        for p in range(len(participants)):
-            input = torch.tensor(past[p*2:p*2+1,:])
-            pred = model_load.prediction(rnn_model,input,future_timesegments)
-            pred.detach().numpy().prepend(participants_positions[2*p:2*p+1,:])
+        local_par_pos = np.zeros_like(past)
+        for c in range(len(past)-1):
+            local_par_pos[:,c]= past[:,c]-past[0,c] #subtract the earliest coordinate as the trajectories need to start at 0 for the model
         
+        predictions=np.zeros([future_timesegments,2*len(participants)])
+        for p in range(len(participants)):
+            input = torch.tensor([local_par_pos[:,p:p+2]]).to(torch.float32)
+            hidden = rnn_model.init_hidden(input)
+            pred = model_load.prediction(rnn_model,input,future_timesegments) 
+            predictions[:,2*p:2*p+2]=pred.detach().numpy()[0]
 
-        veh_angle = previous_ambulance_rotation-ambulance_rotation[0] #Pitch in carla's coordinate system
-        x_move = np.cos(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) - np.sin(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
-        z_move = np.sin(veh_angle)*(previous_ambulance_location[0]-ambulance_location[0]) + np.cos(veh_angle)*(previous_ambulance_location[2]-ambulance_location[2])
+        veh_angle = previous_ambulance_rotation.yaw-ambulance_rotation.yaw 
+        x_move = np.cos(veh_angle)*(previous_ambulance_location.x-ambulance_location.x) - np.sin(veh_angle)*(previous_ambulance_location.z-ambulance_location.z)
+        z_move = np.sin(veh_angle)*(previous_ambulance_location.x-ambulance_location.x) + np.cos(veh_angle)*(previous_ambulance_location.z-ambulance_location.z)
     
-        active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
-        active_set_x,active_set_z=trim_active_set(active_set_x,active_set_z)
+        
 
         
         #Take pictures
@@ -296,17 +332,35 @@ def __main__():
         x,y,z = calc_cartesian_image_data(camera_coordinates,depth_data)
         x,y,z = filter_data(x,y,z)
 
-        active_set_x.append(x)
-        active_set_y.append(y)
-        active_set_z.append(z)
+        active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
 
-        cost_map = map2grid(cost_map, x, z, labels, map_width, map_height, cell_size)
+        active_set_x = np.append(active_set_x,x)
+        active_set_y = np.append(active_set_y,y)
+        active_set_z = np.append(active_set_z,z)
+
+        active_set_x,active_set_y,active_set_z=trim_active_set(active_set_x,active_set_y,active_set_z)
+
+
+        cost_map = map2grid(cost_map, active_set_x, active_set_z, labels, map_width, map_height, cell_size)
         
-        collision_map=create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon)
+        collision_map=create_collision_map(participants_labels,predictions,cost_map,prediction_horizon)
 
-        #Calculate costs
+        #Calculate 
+        primitives=get_primitives()
+        costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 0, 600, 2.4, target)
+        best_primitive = mp.select_best_primitive(costs)
+        throttle,steer,brake = mp.convert_to_vehicle_control(best_primitive)
+        ambulance.apply_control(carla.VehicleControl(throttle,steer,brake))
+
+        #Report
+        print(time.time())
+        print(best_primitive)
+        if should_print and time.time()-start>15 :
+            should_print=False
 
 
-        
 
-    
+
+
+if __name__ == "__main__":
+    main()
