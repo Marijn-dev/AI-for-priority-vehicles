@@ -43,12 +43,12 @@ def create_data(file, T_x, T_y):
 	segments = total_timesegments - T_x - T_y + 1
 	X  = np.zeros((segments*nr_vechicles,T_x,2))
 	y  = np.zeros((segments*nr_vechicles,T_y,2))
-	
 	# create segments by shifting over locations using i:i+T_x and i+T_x:i+T_x+T_y respectively
 	segments_iterator = 0 # to iterate over segment lengths
 	for j in range(0,nr_vechicles):
-		X_temp = np.array([locations[j][i:i+T_x] for i in range(0,segments)])
-		y_temp = np.array([locations[j][i+T_x:i+T_x+T_y] for i in range(0,segments)])
+		X_temp = np.array([(locations[j][i:i+T_x] - locations[j][i]) for i in range(0,segments)])
+		# print(np.shape(X_temp))
+		y_temp = np.array([(locations[j][i+T_x:i+T_x+T_y] - locations[j][i]) for i in range(0,segments)])
 		X[j*segments:j*segments+segments] = X_temp
 		y[j*segments:j*segments+segments] = y_temp
 		segments_iterator += segments
@@ -60,9 +60,5 @@ if __name__== "__main__":
 	file1 = cwd + '/data/Coordinates_T30_run_1.csv'
 	# file2 = cwd + '/LSTM/relative_coordinates_T20_2.csv'
 	
-	X, y = create_data(file1,5,3)
-	print(np.shape(X))
-	print(np.shape(y))
-	print(X[0])
-	print(y[0])
+	X, y = create_data(file1,3,2)
 	
