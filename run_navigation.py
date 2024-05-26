@@ -16,6 +16,7 @@ import scenario_setup as scene
 import selection_motion_primitive as mp
 
 
+
 def get_point_image(point_img,K_inv,Width,Height):
         loc_mat=np.zeros([Height,Width,3])
         static_projection_matrix=np.zeros([Height,Width,3])
@@ -258,10 +259,8 @@ def main():
     # batch_size = 1
     # num_layers = 3
     past_timefragments=5
-    future_timesegments = 2
-    model_name = 'RNN_PAST5_FUTURE' + str(future_timesegments) + '.pt'
-    rnn_model = torch.load('AI-for-priority-vehicles/models/' + model_name)
-
+    future_timesegments = 4
+      
     #gather data from carla
     #initialize
     #in vehicle or pedestrian out new data points 

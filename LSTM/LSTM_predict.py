@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from datapreprocessing import create_data
 
-def prediction(input):
+def prediction(input,global_path_to_model):
     # Define the RNN model
     class SimpleRNN(nn.Module):
         def __init__(self, input_size, hidden_size, output_size, num_layers, future_timesegments):
@@ -54,7 +54,7 @@ def prediction(input):
     future_timesegments = 4
     model_name = 'LSTM_PAST5_FUTURE4_H500_L2_RELU.pt'
     LSTM_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
-    LSTM_model = torch.load('models/' + model_name)
+    LSTM_model = torch.load(global_path_to_model)
     hidden = LSTM_model.init_hidden(input)
     future_pred, _ = LSTM_model(input,hidden)
     return future_pred

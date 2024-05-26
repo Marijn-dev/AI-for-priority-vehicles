@@ -44,7 +44,11 @@ def scenario_setup():
     client.set_timeout(120.0)
     world = client.get_world()
 
-   
+    settings = world.get_settings()
+    settings.fixed_delta_seconds = 1 # Set a variable time-step
+    world.apply_settings(settings)
+
+
     if world.get_map().name =="Carla/Maps/Town10HD_Opt":
         world = client.load_world('Town04')
     actor_list = world.get_actors()
