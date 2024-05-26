@@ -10,9 +10,8 @@ import LSTM as lstm
 import torch
 
 import carla
-
-import model_load
-from model_load import SimpleRNN
+from LSTM_predict import SimpleRNN
+import LSTM_predict
 import scenario_setup as scene
 import selection_motion_primitive as mp
 
@@ -217,7 +216,7 @@ def main():
     ambulance, participants, participants_labels =scene.scenario_setup()
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
-    target=[0,100] #specifiy where the ambulance needs to go 
+    target=[275,0] #specifiy where the ambulance needs to go 
 
     depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
@@ -315,16 +314,13 @@ def main():
         predictions=np.zeros([future_timesegments,2*len(participants)])
         for p in range(len(participants)):
             input = torch.tensor([local_par_pos[:,p:p+2]]).to(torch.float32)
-            hidden = rnn_model.init_hidden(input)
-            pred = model_load.prediction(rnn_model,input,future_timesegments) 
+            pred = LSTM_predict.prediction(input)
             predictions[:,2*p:2*p+2]=pred.detach().numpy()[0]
 
         veh_angle = previous_ambulance_rotation.yaw-ambulance_rotation.yaw 
         x_move = np.cos(veh_angle)*(previous_ambulance_location.x-ambulance_location.x) - np.sin(veh_angle)*(previous_ambulance_location.z-ambulance_location.z)
         z_move = np.sin(veh_angle)*(previous_ambulance_location.x-ambulance_location.x) + np.cos(veh_angle)*(previous_ambulance_location.z-ambulance_location.z)
     
-        
-
         
         #Take pictures
         
