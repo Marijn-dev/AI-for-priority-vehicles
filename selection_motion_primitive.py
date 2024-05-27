@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\pepij\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
+costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
