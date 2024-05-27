@@ -71,4 +71,12 @@ def scenario_setup():
     ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point)
     participants = [regular_cars_1,regular_cars_2]
     participant_labels = ["car","car"]
-    return ai_ambulance ,participants,participant_labels
+
+    camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
+    blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+    depth_camera = world.spawn_actor(blueprint, camera_transform, attach_to=ai_ambulance)
+
+    seg_blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+    segment_camera = world.spawn_actor(seg_blueprint, camera_transform, attach_to=ai_ambulance)
+
+    return ai_ambulance ,participants,participant_labels,depth_camera,segment_camera

@@ -6,7 +6,7 @@ import csv
 import time
 import MapToGrid as m2g
 import LSTM as lstm
-
+import queue
 import torch
 
 import carla
@@ -14,6 +14,7 @@ from LSTM_predict import SimpleRNN
 import LSTM_predict
 import scenario_setup as scene
 import selection_motion_primitive as mp
+
 
 
 
@@ -214,7 +215,7 @@ def main():
     #Run scenario and import knowledge from carla.
     
 
-    ambulance, participants, participants_labels =scene.scenario_setup()
+    ambulance, participants, participants_labels,depth_camera,segment_camera =scene.scenario_setup()
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
     target=[275,0] #specifiy where the ambulance needs to go 
@@ -294,6 +295,19 @@ def main():
 
         while time.time() < (start + step_time * i_time_steps):
             pass
+
+        image_queue = queue.LifoQueue()
+        depth_camera.listen(lambda data: image_queue.put(data))
+        depth_data = image_queue.get().raw_data
+        depth_data=np.reshape(depth_data,[600,800,4])
+        depth_data=convert_image_to_depth(depth_data)
+        
+        seg_image_queue = queue.LifoQueue()
+        segment_camera.listen(lambda data: seg_image_queue.put(data))
+        segment_data = seg_image_queue.get().raw_data
+        segment_data=np.reshape(segment_data,[600,800,4])
+        segment_data=np.round(segment_data*255)
+        labels=segment_data[:,:,0]
 
         previous_ambulance_location = ambulance_location
         previous_ambulance_rotation = ambulance_rotation
