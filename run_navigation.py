@@ -293,13 +293,14 @@ def main():
     n_steps=30
     start_time = time.time()
     start = time.time()
-    while time.time()-start <= n_steps*step_time:
+    while i_time_steps<n_steps:
         i_time_steps += 1
+        world.tick()
 
         time.sleep(step_time - 0.2)
 
-        while time.time() < (start + step_time * i_time_steps):
-            pass
+        # while time.time() < (start + step_time * i_time_steps):
+        #     pass
 
         #redefine camera to change segmentation error
         depth_camera.destroy()
