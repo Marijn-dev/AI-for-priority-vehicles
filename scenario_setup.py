@@ -45,7 +45,8 @@ def scenario_setup():
     world = client.get_world()
 
     settings = world.get_settings()
-    settings.fixed_delta_seconds = 0.001 # Set a variable time-step
+    settings.fixed_delta_seconds = 0.5 # Set a variable time-step
+    settings.sychronous_mode=True
     world.apply_settings(settings)
 
 
