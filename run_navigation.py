@@ -215,7 +215,7 @@ def main():
     #Run scenario and import knowledge from carla.
     
 
-    ambulance, participants, participants_labels,depth_camera,segment_camera =scene.scenario_setup()
+    ambulance, participants, participants_labels,depth_camera,segment_camera,world =scene.scenario_setup()
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
     target=[275,0] #specifiy where the ambulance needs to go 
@@ -295,6 +295,16 @@ def main():
 
         while time.time() < (start + step_time * i_time_steps):
             pass
+
+        #redefine camera to change segmentation error
+        depth_camera.destroy()
+        segment_camera.destroy()
+        camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
+        blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+        depth_camera = world.spawn_actor(blueprint, camera_transform, attach_to=ambulance)
+
+        seg_blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+        segment_camera = world.spawn_actor(seg_blueprint, camera_transform, attach_to=ambulance)
 
         image_queue = queue.LifoQueue()
         depth_camera.listen(lambda data: image_queue.put(data))

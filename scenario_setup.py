@@ -79,4 +79,4 @@ def scenario_setup():
     seg_blueprint = world.get_blueprint_library().find('sensor.camera.depth')
     segment_camera = world.spawn_actor(seg_blueprint, camera_transform, attach_to=ai_ambulance)
 
-    return ai_ambulance ,participants,participant_labels,depth_camera,segment_camera
+    return ai_ambulance ,participants,participant_labels,depth_camera,segment_camera,world
