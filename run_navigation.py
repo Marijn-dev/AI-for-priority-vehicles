@@ -310,6 +310,7 @@ def main():
         depth_camera.listen(lambda data: image_queue.put(data))
         depth_data = image_queue.get().raw_data
         depth_data=np.reshape(depth_data,[600,800,4])
+        
         depth_data=convert_image_to_depth(depth_data)
         
         seg_image_queue = queue.LifoQueue()

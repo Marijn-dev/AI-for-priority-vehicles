@@ -45,7 +45,7 @@ def scenario_setup():
     world = client.get_world()
 
     settings = world.get_settings()
-    settings.fixed_delta_seconds = 1 # Set a variable time-step
+    settings.fixed_delta_seconds = 0.001 # Set a variable time-step
     world.apply_settings(settings)
 
 
@@ -64,8 +64,8 @@ def scenario_setup():
     car_spawn_point_2 = spawn_point_pool.pop()
 
     car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
-    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1)
-    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2)
+    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1,autopilot=True)
+    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2,autopilot=True)
     
 
     ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point)
