@@ -57,6 +57,8 @@ def scenario_setup():
             a.destroy()
     
     spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world), find_spawn_point_4(world)]
+    # Shuffle the pool to randomize order
+    # random.shuffle(spawn_point_pool)
 
     ai_ambulance_spawn_point = spawn_point_pool.pop()
     ambulance_spawn_point = spawn_point_pool.pop()
@@ -64,13 +66,23 @@ def scenario_setup():
     car_spawn_point_2 = spawn_point_pool.pop()
 
     car_models = ['vehicle.audi.a2', 'vehicle.toyota.prius', 'vehicle.citroen.c3']
-    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1)
-    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2)
+    regular_cars_1, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_1, autopilot=False)
+    regular_cars_2, _ = setup_vehicle(world, random.choice(car_models), car_spawn_point_2, autopilot=False)
     
 
     ai_ambulance, ai_ambulance_autopilot = setup_vehicle(world, 'vehicle.ford.ambulance', ai_ambulance_spawn_point)
     participants = [regular_cars_1,regular_cars_2]
     participant_labels = ["car","car"]
+
+    # Apply a simple motion primitive to the AI ambulance (example: go straight)
+    if regular_cars_1:
+        control = carla.VehicleControl(throttle=0.7, steer=0.0)
+        regular_cars_1.apply_control(control)
+
+    # Apply a simple motion primitive to the AI ambulance (example: go straight)
+    if regular_cars_2:
+        control = carla.VehicleControl(throttle=0.7, steer=0.0)
+        regular_cars_2.apply_control(control)
 
     camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
     blueprint = world.get_blueprint_library().find('sensor.camera.depth')

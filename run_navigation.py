@@ -220,9 +220,14 @@ def main():
     ambulance_rotation=ambulance.get_transform().rotation 
     target=[275,0] #specifiy where the ambulance needs to go 
 
-    depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
-    segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    # depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    # segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     
+    depth_data=plt.imread('/home/zyd/AI-for-priority-vehicles/Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
+    segment_data=plt.imread('/home/zyd/AI-for-priority-vehicles/Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
+    
+
+
     depth_data=convert_image_to_depth(depth_data)
     segment_data=np.round(segment_data*255)
     labels=segment_data[:,:,0]
