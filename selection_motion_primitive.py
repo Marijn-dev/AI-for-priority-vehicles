@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-# costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
+costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap4.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -173,7 +173,8 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         curvature_rad_per_meter = np.radians(primitive['curvature'])
         distance = primitive['distance']
         dynamic_margin = dynamic_safety_margin(primitive['velocity'])
-        half_width = (vehicle_width / 2) + dynamic_margin
+        # print(dynamic_margin)
+        half_width = ((vehicle_width + dynamic_margin) / 2)
         penalty = time_penalty(primitive['velocity'])
         target_x, target_y = target
 
@@ -233,7 +234,7 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 
         # # Debug plot to visualize indices
         # fig, ax = plt.subplots(figsize=(10, 10))
-        # ax.imshow(costmap, cmap='viridis', interpolation='nearest')
+        # ax.imshow(costmap, cmap=cmap, interpolation='nearest')
         # ax.scatter(x_all_indices, y_all_indices, color='red', s=1)
         # ax.plot(x_center, y_center, 'b-', label='Motion Primitive')
         # ax.plot(x_left, y_left, 'r--', label='Left Buffer')
