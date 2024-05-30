@@ -45,7 +45,7 @@ def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
         vehicle.set_autopilot(autopilot)
     return vehicle, autopilot
 
-def scenario_setup():
+def scenario_setup(goal_target='find_spawn_point_1'):
     client = carla.Client('localhost', 2000)
     client.set_timeout(120.0)
     world = client.get_world()
@@ -71,10 +71,20 @@ def scenario_setup():
         if a.id > 146:
             a.destroy()
 
+    # Choose target based on goal
+    target = starting_target_pairs[goal_target]
+    
+    # Find corresponding spawn point function
+    spawn_point_func = [name for name, coord in starting_target_pairs.items() if coord == target][0]
+    
+    # Remove the used starting point from the pool
+    del starting_target_pairs[spawn_point_func]
+    
     spawn_point_functions = [find_spawn_point_1, find_spawn_point_2, find_spawn_point_3, find_spawn_point_4]
-    random.shuffle(spawn_point_functions)
+    spawn_point_functions = [func for func in spawn_point_functions if func.__name__ != spawn_point_func]
 
     spawn_point_pool = [func(world) for func in spawn_point_functions]
+    random.shuffle(spawn_point_pool)
     ai_ambulance_spawn_point = spawn_point_pool.pop()
     ambulance_spawn_point = spawn_point_pool.pop()
     car_spawn_point_1 = spawn_point_pool.pop()
@@ -115,9 +125,5 @@ def scenario_setup():
         regular_cars_2.apply_control(control)
 
     world.tick()  # Ensure the controls are applied in the same tick
-
-    # Find the function name of the selected ai_ambulance spawn point
-    func_name = [name for name, func in globals().items() if func == ai_ambulance_spawn_point][0]
-    target = starting_target_pairs.pop(func_name)
 
     return ai_ambulance, participants, participant_labels, depth_camera, segment_camera, world, target

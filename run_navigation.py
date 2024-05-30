@@ -214,8 +214,11 @@ def main():
     should_print=True 
     #Run scenario and import knowledge from carla.
     
+    # Define the goal target key for the ambulance
+    goal_target = 'find_spawn_point_1'  # Options: 'find_spawn_point_1', 'find_spawn_point_2', 'find_spawn_point_3', 'find_spawn_point_4'
+    
 
-    ambulance, participants, participants_labels,depth_camera,segment_camera,world,target =scene.scenario_setup()
+    ambulance, participants, participants_labels,depth_camera,segment_camera,world,target =scene.scenario_setup(goal_target)
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
 
