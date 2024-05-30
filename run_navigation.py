@@ -218,7 +218,6 @@ def main():
     ambulance, participants, participants_labels,depth_camera,segment_camera,world =scene.scenario_setup()
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
-    target=[275,0] #specifiy where the ambulance needs to go 
 
     # depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     # segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
@@ -373,7 +372,7 @@ def main():
 
         #Calculate 
         primitives=get_primitives()
-        costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 0, 600, 2.4, target)
+        costs = calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 2.4, ambulance_location, target)
         best_primitive = mp.select_best_primitive(costs)
         throttle,steer,brake = mp.convert_to_vehicle_control(best_primitive)
         ambulance.apply_control(carla.VehicleControl(throttle,steer,brake))

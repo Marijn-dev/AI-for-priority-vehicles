@@ -2,33 +2,37 @@ import carla
 import random
 import time
 
+# Define the target coordinates for each spawn point
+starting_target_pairs = {
+    "find_spawn_point_1": (200, -278),
+    "find_spawn_point_2": (235, -307),
+    "find_spawn_point_3": (166, -311),
+    "find_spawn_point_4": (205, -341)
+}
 
 def find_spawn_point_1(world):
-    spawn_location = carla.Location(x=204.56409912109375, y=-278.99392700195312 + random.randrange(-20, 20,2), z=0.7819424271583557)
+    spawn_location = carla.Location(x=204.56409912109375, y=-278.99392700195312 + random.randrange(-20, 20, 2), z=0.7819424271583557)
     spawn_rotation = carla.Rotation(pitch=0, yaw=-88.68557739257812, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_2(world):
-    spawn_location = carla.Location(x=202.4706573486328, y=-335.8112487792969 + random.randrange(-20, 20,2), z=1.1225100755691528)
+    spawn_location = carla.Location(x=202.4706573486328, y=-335.8112487792969 + random.randrange(-20, 20, 2), z=1.1225100755691528)
     spawn_rotation = carla.Rotation(pitch=0, yaw=91, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_3(world):
-    spawn_location = carla.Location(x=232.24923706054688+random.randrange(-20, 20,2), y=-310.7073059082031, z=1.3423326015472412)
+    spawn_location = carla.Location(x=232.24923706054688 + random.randrange(-20, 20, 2), y=-310.7073059082031, z=1.3423326015472412)
     spawn_rotation = carla.Rotation(pitch=0, yaw=178.68557739257812, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
 
 def find_spawn_point_4(world):
-    spawn_location = carla.Location(x=175.24923706054688+random.randrange(-20, 20,2), y=-307.7073059082031, z=1.3423326015472412)
+    spawn_location = carla.Location(x=175.24923706054688 + random.randrange(-20, 20, 2), y=-307.7073059082031, z=1.3423326015472412)
     spawn_rotation = carla.Rotation(pitch=-6, yaw=-1.1, roll=0)
     spawn_transform = carla.Transform(spawn_location, spawn_rotation)
     return spawn_transform
-
-import carla
-import random
 
 def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
     """Utility function to spawn a vehicle."""
@@ -67,9 +71,10 @@ def scenario_setup():
         if a.id > 146:
             a.destroy()
 
-    spawn_point_pool = [find_spawn_point_1(world), find_spawn_point_2(world), find_spawn_point_3(world), find_spawn_point_4(world)]
-    random.shuffle(spawn_point_pool)
-    
+    spawn_point_functions = [find_spawn_point_1, find_spawn_point_2, find_spawn_point_3, find_spawn_point_4]
+    random.shuffle(spawn_point_functions)
+
+    spawn_point_pool = [func(world) for func in spawn_point_functions]
     ai_ambulance_spawn_point = spawn_point_pool.pop()
     ambulance_spawn_point = spawn_point_pool.pop()
     car_spawn_point_1 = spawn_point_pool.pop()
@@ -111,5 +116,8 @@ def scenario_setup():
 
     world.tick()  # Ensure the controls are applied in the same tick
 
-    return ai_ambulance, participants, participant_labels, depth_camera, segment_camera, world
+    # Find the function name of the selected ai_ambulance spawn point
+    func_name = [name for name, func in globals().items() if func == ai_ambulance_spawn_point][0]
+    target = starting_target_pairs.pop(func_name)
 
+    return ai_ambulance, participants, participant_labels, depth_camera, segment_camera, world, target

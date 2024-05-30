@@ -5,18 +5,20 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap4.npy')
+costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
 y_offset=600
 
 target_coordinates = {
-        'straight': (539, 587),
-        'left': (180, 410),
-        'right': (177, 766)
+        '1': (200, -278), # town
+        '2': (235, -307), # side town
+        '3': (166, -311), # houses
+        '4': (205, -341) # highway
     }
-target_direction = 'straight'  # Set the desired direction here
+
+target_direction = '1'  # Set the desired direction here
 target = target_coordinates[target_direction]
 
 # Generate a set of potential motion primitives
@@ -145,7 +147,23 @@ def dynamic_safety_margin(velocity, base_margin=0.5, velocity_scale=0.8):
     return base_margin + velocity_scale * velocity
 
 def time_penalty(velocity, base_penalty=10.0):
-    return base_penalty / (1 + velocity)
+    return base_penalty / (velocity)
+
+def calculate_final_global_coordinates(ambulance_location, distance, curvature_rad_per_meter):
+    if curvature_rad_per_meter == 0:
+        # Straight line
+        final_x = ambulance_location.x + distance * np.cos(np.radians(ambulance_location.yaw))
+        final_y = ambulance_location.y + distance * np.sin(np.radians(ambulance_location.yaw))
+    else:
+        # Curved path
+        radius = 1 / curvature_rad_per_meter
+        change_in_angle = distance * curvature_rad_per_meter
+        angle = np.radians(ambulance_location.yaw) + change_in_angle
+
+        final_x = ambulance_location.x + radius * (np.sin(angle) - np.sin(np.radians(ambulance_location.yaw)))
+        final_y = ambulance_location.y - radius * (np.cos(angle) - np.cos(np.radians(ambulance_location.yaw)))
+
+    return final_x, final_y
 
 def calculate_gps_cost(final_x, final_y, target_x, target_y):
     distance = np.sqrt((final_x - target_x)**2 + (final_y - target_y)**2)
@@ -167,7 +185,7 @@ def place_traffic_participants(t, label, position, M):
         for y in range(max(0, y_car - actor_radius), min(M[t].shape[1], y_car + actor_radius)):
             M[t][x, y] = 512
 
-def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size, x_offset, y_offset, vehicle_width, target):
+def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size, x_offset, y_offset, vehicle_width, ambulance_location, target):
     costs = []
     for primitive in primitives:
         curvature_rad_per_meter = np.radians(primitive['curvature'])
@@ -251,21 +269,21 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         else:
             summed_cost = np.sum(path_costs)
 
-        normalized_cost = (summed_cost + dynamic_margin) / distance + penalty
+        normalized_cost = summed_cost / distance + penalty
 
-        x_final = x_center[-1]
-        y_final = y_center[-1]
-        gps_cost = calculate_gps_cost(x_final, y_final, target_x, target_y)
+        # Calculate the final global coordinates of the primitive
+        x_final_global, y_final_global = calculate_final_global_coordinates(ambulance_location, distance, curvature_rad_per_meter)
+        gps_cost = calculate_gps_cost(x_final_global, y_final_global, target_x, target_y)
 
         collision_cost = 0
         for t in range(len(predicted_costmaps)):
-            segment_length = len(x_indices) // len(predicted_costmaps)
-            segment_x_indices = x_indices[t * segment_length:(t + 1) * segment_length]
-            segment_y_indices = y_indices[t * segment_length:(t + 1) * segment_length]
+            segment_length = len(x_all_indices) // len(predicted_costmaps)
+            segment_x_indices = x_all_indices[t * segment_length:(t + 1) * segment_length]
+            segment_y_indices = y_all_indices[t * segment_length:(t + 1) * segment_length]
 
             collision_cost += np.sum(predicted_costmaps[t][segment_y_indices, segment_x_indices])
 
-        total_cost = normalized_cost # + gps_cost + collision_cost
+        total_cost = gps_cost #normalized_cost + gps_cost + collision_cost
 
         costs.append(total_cost)
 
@@ -385,7 +403,7 @@ def plot_best_primitive_costmap(ax, costmap, primitive, cell_size, x_offset, y_o
     curvature_rad_per_meter = np.radians(curvature_deg_per_meter)
     # Calculate the dynamically adjusted safety margin
     dynamic_margin = dynamic_safety_margin(primitive['velocity'])
-    half_width = (vehicle_width / 2) + dynamic_margin  # Half width including safety margin
+    half_width = (vehicle_width + dynamic_margin) / 2  # Half width including safety margin
 
     if curvature_deg_per_meter != 0:
         radius = 1 / curvature_rad_per_meter
