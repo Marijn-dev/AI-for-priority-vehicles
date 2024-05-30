@@ -4,10 +4,10 @@ import time
 
 # Define the target coordinates for each spawn point
 starting_target_pairs = {
-    "find_spawn_point_1": (200, -278),
-    "find_spawn_point_2": (235, -307),
-    "find_spawn_point_3": (166, -311),
-    "find_spawn_point_4": (205, -341)
+    "find_spawn_point_1": (200, -278), # town
+    "find_spawn_point_2": (235, -307), # side town
+    "find_spawn_point_3": (166, -311), # houses
+    "find_spawn_point_4": (205, -341) # highway
 }
 
 def find_spawn_point_1(world):
