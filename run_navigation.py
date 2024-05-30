@@ -16,7 +16,13 @@ import scenario_setup as scene
 import selection_motion_primitive as mp
 
 
-
+# Define the target coordinates for each spawn point
+starting_target_pairs = {
+    "find_spawn_point_1": (200, -278), # town
+    "find_spawn_point_2": (235, -307), # side town
+    "find_spawn_point_3": (166, -311), # houses
+    "find_spawn_point_4": (205, -341) # highway
+}
 
 def get_point_image(point_img,K_inv,Width,Height):
         loc_mat=np.zeros([Height,Width,3])

@@ -5,7 +5,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.colors as mcolors
 
 # Load the costmap
-costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
+# costmap = np.load(r'C:\Users\20192651\Documents\Master Year 1\Q3\5ARIP10 Interdisciplinary team project\costmap11.npy')
 # rotated_costmap = np.flipud(costmap.T)
 
 x_offset=0
@@ -23,26 +23,26 @@ target = target_coordinates[target_direction]
 
 # Generate a set of potential motion primitives
 primitives = [
-        {'curvature': 0, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 0, 'distance': 10, 'velocity': 0.65},
+        # {'curvature': 0, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 0, 'distance': 10, 'velocity': 0.65},
         {'curvature': 0, 'distance': 20, 'velocity': 0.75},
-        {'curvature': 0, 'distance': 20, 'velocity': 0.9},
-        {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': 5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        # {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
+        # {'curvature': 5, 'distance': 10, 'velocity': 0.5},
         {'curvature': 5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': -5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
+        # {'curvature': -5, 'distance': 10, 'velocity': 0.5},
         {'curvature': -5, 'distance': 20, 'velocity': 0.7},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.7},
     ]
 
 def generate_random_colors(num_colors):

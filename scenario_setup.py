@@ -46,6 +46,8 @@ def setup_vehicle(world, model_id, spawn_point, autopilot=False, color=None):
     return vehicle, autopilot
 
 def scenario_setup(goal_target='find_spawn_point_1'):
+    goal_target='find_spawn_point_1'
+
     client = carla.Client('localhost', 2000)
     client.set_timeout(120.0)
     world = client.get_world()
@@ -86,7 +88,7 @@ def scenario_setup(goal_target='find_spawn_point_1'):
     spawn_point_pool = [func(world) for func in spawn_point_functions]
     random.shuffle(spawn_point_pool)
     ai_ambulance_spawn_point = spawn_point_pool.pop()
-    ambulance_spawn_point = spawn_point_pool.pop()
+    # ambulance_spawn_point = spawn_point_pool.pop()
     car_spawn_point_1 = spawn_point_pool.pop()
     car_spawn_point_2 = spawn_point_pool.pop()
 
