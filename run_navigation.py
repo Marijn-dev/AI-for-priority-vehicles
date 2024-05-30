@@ -215,7 +215,7 @@ def main():
     #Run scenario and import knowledge from carla.
     
 
-    ambulance, participants, participants_labels,depth_camera,segment_camera,world =scene.scenario_setup()
+    ambulance, participants, participants_labels,depth_camera,segment_camera,world,target =scene.scenario_setup()
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
 
@@ -372,7 +372,7 @@ def main():
 
         #Calculate 
         primitives=get_primitives()
-        costs = calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 2.4, ambulance_location, target)
+        costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 2.4, ambulance_location, target)
         best_primitive = mp.select_best_primitive(costs)
         throttle,steer,brake = mp.convert_to_vehicle_control(best_primitive)
         ambulance.apply_control(carla.VehicleControl(throttle,steer,brake))
