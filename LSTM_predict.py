@@ -3,7 +3,6 @@ import torch.utils.data
 
 import csv
 import os
-import pandas as pd
 import numpy as np
 import torch
 import torch
@@ -54,7 +53,7 @@ def prediction(input):
     future_timesegments = 4
     model_name = 'LSTM_PAST5_FUTURE4_H500_L2_RELU.pt'
     LSTM_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
-    LSTM_model = torch.load('AI-for-priority-vehicles/LSTM/models/' + model_name)
+    LSTM_model = torch.load('LSTM/models/' + model_name)
     hidden = LSTM_model.init_hidden(input)
     future_pred, _ = LSTM_model(input,hidden)
     return future_pred

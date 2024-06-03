@@ -10,7 +10,8 @@ import queue
 import torch
 
 import carla
-from LSTM_predict import SimpleRNN
+
+from LSTM_predict import SimpleRNN  
 import LSTM_predict
 import scenario_setup as scene
 import selection_motion_primitive as mp
@@ -228,11 +229,11 @@ def main():
     ambulance_location=ambulance.get_transform().location
     ambulance_rotation=ambulance.get_transform().rotation 
 
-    # depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
-    # segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    # depth_data=plt.imread('Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
+    # segment_data=plt.imread('Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     
-    depth_data=plt.imread('/home/zyd/AI-for-priority-vehicles/Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
-    segment_data=plt.imread('/home/zyd/AI-for-priority-vehicles/Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
+    depth_data=plt.imread('Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
+    segment_data=plt.imread('Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
     
 
 
