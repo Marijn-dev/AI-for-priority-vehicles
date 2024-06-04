@@ -14,6 +14,7 @@ from LSTM_predict import SimpleRNN
 import LSTM_predict
 import scenario_setup as scene
 import selection_motion_primitive as mp
+import queue
 
 
 
@@ -28,12 +29,14 @@ def get_point_image(point_img,K_inv,Width,Height):
         return static_projection_matrix
 
 def convert_image_to_depth(image_data):
+    np.array().reshape(600,800,4)
     R=image_data[:,:,0]
     G=image_data[:,:,1]
     B=image_data[:,:,2]
 
     scale_factor=256
     normalized = ((R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1))*1000*scale_factor
+    # print(normalized.shape())
     return normalized
 
 def define_camera_matrix():
@@ -243,7 +246,14 @@ def get_primitives():
     ]
     return primitives
 
-
+# Add a timeout to the queue get operation
+def get_camera_data(camera_queue, timeout=5):
+    try:
+        data = camera_queue.get(timeout=timeout)
+        return data.raw_data
+    except queue.Empty:
+        print("Warning: Timeout waiting for camera data.")
+        return None
 
 def main():   
     should_print=True 
@@ -257,10 +267,33 @@ def main():
     # depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     # segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     
-    depth_data=plt.imread('Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
-    segment_data=plt.imread('Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
+    # depth_data=plt.imread('Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
+    # segment_data=plt.imread('Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
+    
+    # depth_data[:]=0
     
 
+    camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
+    blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+    depth_camera = world.spawn_actor(blueprint, camera_transform, attach_to=ambulance)
+    print("Depth camera spawned.")
+
+    seg_blueprint = world.get_blueprint_library().find('sensor.camera.depth')
+    segment_camera = world.spawn_actor(seg_blueprint, camera_transform, attach_to=ambulance)
+    print("Segment camera spawned.")
+
+    image_queue = queue.LifoQueue()
+    depth_camera.listen(lambda data: image_queue.put(data))
+    print("Depth camera is listening")
+
+    seg_image_queue = queue.LifoQueue()
+    segment_camera.listen(lambda data: seg_image_queue.put(data))
+    print("Segment camera is listening")
+
+    depth_data = get_camera_data(image_queue)
+    print(f"depth_data_shape: {depth_data.shape}")
+    segment_data = get_camera_data(seg_image_queue)
+    print(f"segment_data_shape: {segment_data.shape}")
 
     depth_data=convert_image_to_depth(depth_data)
     segment_data=np.round(segment_data*255)
@@ -337,7 +370,6 @@ def main():
         # while time.time() < (start + step_time * i_time_steps):
         #     pass
 
-        import queue
 
         # Redefine camera to change segmentation error
         print("Destroying and respawning cameras...")
@@ -362,21 +394,12 @@ def main():
         segment_camera.listen(lambda data: seg_image_queue.put(data))
         print("Segment camera is listening")
 
-        # Add a timeout to the queue get operation
-        def get_camera_data(camera_queue, timeout=30):
-            try:
-                data = camera_queue.get(timeout=timeout)
-                return data.raw_data
-            except queue.Empty:
-                print("Warning: Timeout waiting for camera data.")
-                return None
-
         # Get depth data with a timeout
         depth_data = get_camera_data(image_queue)
         if depth_data is not None:
             depth_data = np.reshape(depth_data, [600, 800, 4])
             depth_data = convert_image_to_depth(depth_data)
-            print(f"Depth data after converting: {depth_data}")
+            print(f"Depth data is converted")
         else:
             print("No depth data received.")
             continue  # Skip the rest of the loop iteration if no data is received
@@ -386,7 +409,7 @@ def main():
         if segment_data is not None:
             segment_data = np.reshape(segment_data, [600, 800, 4])
             segment_data = np.round(segment_data * 255)
-            print(f"Segment data: {segment_data}")
+            print(f"Segment datais converted")
             labels = segment_data[:, :, 0]
         else:
             print("No segment data received.")
