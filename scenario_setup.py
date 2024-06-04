@@ -110,7 +110,7 @@ def scenario_setup(goal_target='find_spawn_point_1'):
     # Set the spectator position
     spectator = world.get_spectator()
     spectator_transform = carla.Transform(
-        carla.Location(x=185.65426635742188, y=-328.8107604980469, z=33.317054748535156),
+        carla.Location(x=175.65426635742188, y=-338.8107604980469, z=43.317054748535156),
         carla.Rotation(pitch=-50.184872, yaw=41.805153, roll=0.000003)
     )
     spectator.set_transform(spectator_transform)

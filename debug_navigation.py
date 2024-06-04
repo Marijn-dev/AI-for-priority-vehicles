@@ -84,6 +84,41 @@ def filter_data(x,y,z):
     z[np.isnan(z)==True]=0
     return x,y,z
 
+def save_costmap_plot(cost_map, active_set_x, active_set_z, labels, timestep):
+    # Flatten the arrays for plotting
+    active_set_x = active_set_x.flatten()
+    active_set_z = active_set_z.flatten()
+    labels = labels.flatten()
+    
+    # print(f"Lengths before trimming: x={len(active_set_x)}, z={len(active_set_z)}, labels={len(labels)}")
+    
+    # Ensure that the sizes of x, z, and labels match
+    min_length = min(len(active_set_x), len(active_set_z), len(labels))
+    active_set_x = active_set_x[:min_length]
+    active_set_z = active_set_z[:min_length]
+    labels = labels[:min_length]
+    
+    # print(f"Lengths after trimming: x={len(active_set_x)}, z={len(active_set_z)}, labels={len(labels)}")
+    
+    plt.scatter(active_set_x, active_set_z, c=labels, cmap='jet')
+    plt.title(f"Costmap at Timestep {timestep}")
+    plt.xlabel('x')
+    plt.ylabel('z')
+    plt.colorbar()
+    plt.savefig(f"costmap_timestep_{timestep}.png")
+    plt.close()
+
+
+def save_collision_map_plot(collision_map, timestep, segment):
+    plt.imshow(collision_map, cmap='jet', origin='lower')
+    plt.title(f"Collision Map at Timestep {timestep}, Segment {segment}")
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.colorbar()
+    plt.savefig(f"collision_map_timestep_{timestep}_segment_{segment}.png")
+    plt.close()
+
+
 def map2grid(map, x, z, labels, width, height, cell_size=0.1):
     """
     Transform the data into the gridded map.
@@ -163,7 +198,7 @@ def create_collision_map(participants_labels,participants_positions,cost_map,pre
     return M
 
    
-   
+
    
 
 def place_traffic_participants(t,p,participants_labels,participants_positions,M,cell_multiplier=10):  
@@ -195,16 +230,16 @@ def get_primitives():
         {'curvature': 5, 'distance': 20, 'velocity': 0.7},
         {'curvature': 10, 'distance': 10, 'velocity': 0.5},
         {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': 15, 'distance': 10, 'velocity': 0.7},
         {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
         {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -5, 'distance': 10, 'velocity': 0.5},
         {'curvature': -5, 'distance': 20, 'velocity': 0.7},
         {'curvature': -10, 'distance': 10, 'velocity': 0.5},
         {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
-        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        # {'curvature': -15, 'distance': 10, 'velocity': 0.7},
     ]
     return primitives
 
@@ -222,8 +257,8 @@ def main():
     # depth_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\depth_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     # segment_data=plt.imread('AI-for-priority-vehicles\Rubens_test_files\Pictures\instance_camera_Sun_Apr_14_20_33_08_2024.png') #to get the data as an array
     
-    depth_data=plt.imread('AI-for-priority-vehicles/Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
-    segment_data=plt.imread('AI-for-priority-vehicles/Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
+    depth_data=plt.imread('Rubens_test_files/Pictures/depth_004641.png') #to get the data as an array
+    segment_data=plt.imread('Rubens_test_files/Pictures/instance_004641.png') #to get the data as an array
     
 
 
@@ -283,7 +318,7 @@ def main():
     
 
         
-
+    # depth_data[:]=0
         
     ##################################################
     #Loop
@@ -292,7 +327,8 @@ def main():
     n_steps=30
     start_time = time.time()
     start = time.time()
-    while input("exit?")!="exit":
+    while i_time_steps < 60:
+        print("Starting timestep:", i_time_steps)
         i_time_steps += 1
         world.tick()
 
@@ -301,29 +337,62 @@ def main():
         # while time.time() < (start + step_time * i_time_steps):
         #     pass
 
-        #redefine camera to change segmentation error
+        import queue
+
+        # Redefine camera to change segmentation error
+        print("Destroying and respawning cameras...")
         depth_camera.destroy()
         segment_camera.destroy()
+        print("Cameras destroyed.")
+
         camera_transform = carla.Transform(carla.Location(x=3.5, z=1.0))
         blueprint = world.get_blueprint_library().find('sensor.camera.depth')
         depth_camera = world.spawn_actor(blueprint, camera_transform, attach_to=ambulance)
+        print("Depth camera spawned.")
 
         seg_blueprint = world.get_blueprint_library().find('sensor.camera.depth')
         segment_camera = world.spawn_actor(seg_blueprint, camera_transform, attach_to=ambulance)
+        print("Segment camera spawned.")
 
-        # image_queue = queue.LifoQueue()
-        # depth_camera.listen(lambda data: image_queue.put(data))
-        # depth_data = image_queue.get().raw_data
-        # depth_data=np.reshape(depth_data,[600,800,4])
-        
-        # depth_data=convert_image_to_depth(depth_data)
-        
-        # seg_image_queue = queue.LifoQueue()
-        # segment_camera.listen(lambda data: seg_image_queue.put(data))
-        # segment_data = seg_image_queue.get().raw_data
-        # segment_data=np.reshape(segment_data,[600,800,4])
-        # segment_data=np.round(segment_data*255)
-        # labels=segment_data[:,:,0]
+        image_queue = queue.LifoQueue()
+        depth_camera.listen(lambda data: image_queue.put(data))
+        print("Depth camera is listening")
+
+        seg_image_queue = queue.LifoQueue()
+        segment_camera.listen(lambda data: seg_image_queue.put(data))
+        print("Segment camera is listening")
+
+        # Add a timeout to the queue get operation
+        def get_camera_data(camera_queue, timeout=30):
+            try:
+                data = camera_queue.get(timeout=timeout)
+                return data.raw_data
+            except queue.Empty:
+                print("Warning: Timeout waiting for camera data.")
+                return None
+
+        # Get depth data with a timeout
+        depth_data = get_camera_data(image_queue)
+        if depth_data is not None:
+            depth_data = np.reshape(depth_data, [600, 800, 4])
+            depth_data = convert_image_to_depth(depth_data)
+            print(f"Depth data after converting: {depth_data}")
+        else:
+            print("No depth data received.")
+            continue  # Skip the rest of the loop iteration if no data is received
+
+        # Get segmentation data with a timeout
+        segment_data = get_camera_data(seg_image_queue)
+        if segment_data is not None:
+            segment_data = np.reshape(segment_data, [600, 800, 4])
+            segment_data = np.round(segment_data * 255)
+            print(f"Segment data: {segment_data}")
+            labels = segment_data[:, :, 0]
+        else:
+            print("No segment data received.")
+            continue  # Skip the rest of the loop iteration if no data is received
+
+        print("Camera data processed.")
 
         previous_ambulance_location = ambulance_location
         previous_ambulance_rotation = ambulance_rotation
@@ -359,9 +428,9 @@ def main():
 
         active_set_x,active_set_z=translate_active_set(active_set_x,active_set_z,x_move,z_move,veh_angle)
 
-        active_set_x = np.append(active_set_x,x)
-        active_set_y = np.append(active_set_y,y)
-        active_set_z = np.append(active_set_z,z)
+        active_set_x = np.append(0,x)
+        active_set_y = np.append(0,y)
+        active_set_z = np.append(0,z)
 
         active_set_x,active_set_y,active_set_z=trim_active_set(active_set_x,active_set_y,active_set_z)
 
@@ -370,21 +439,28 @@ def main():
         
         collision_map=create_collision_map(participants_labels,predictions,cost_map,prediction_horizon)
 
+        vehicle_width = 2.4
+        x_offset=0
+        y_offset=600
+
         #Calculate 
         primitives=get_primitives()
-        costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, 2.4, ambulance_location, target)
+        costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, x_offset, y_offset, vehicle_width, ambulance_location, ambulance_rotation, target)
         best_primitive = mp.select_best_primitive(costs)
         throttle,steer,brake = mp.convert_to_vehicle_control(best_primitive)
 
 
-        #plot cost map
-        plt.scatter(active_set_x,active_set_z,c=depth_data,cmap='jet')
-        plt.show()
+        # Save the cost map plot for each timestep
+        save_costmap_plot(cost_map, active_set_x, active_set_z, labels, i_time_steps)
 
-        #plot the individual coordinates for the cars. 
-        for m in range(prediction_horizon):
-            plt.hist2d(collision_map[m,:,:])
-            plt.show()
+        for segment in range(prediction_horizon):
+            save_collision_map_plot(collision_map[segment], i_time_steps, segment)
+
+        # #plot the individual coordinates for the cars. 
+        # for m in range(prediction_horizon):
+            
+        #     plt.plot(x=range(int(map_width/cell_size)),y=range(int(map_height/cell_size)),data=collision_map[m][:,:].flatten())
+        #     plt.show()
                 
         
 
