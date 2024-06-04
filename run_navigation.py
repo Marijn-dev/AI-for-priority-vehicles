@@ -82,7 +82,9 @@ def calc_cartesian_image_data(rel_coords,depth_values):
 
     x= a*depth_values*(camera_index_mat[:,:,0]+1)
     y= a*depth_values*(camera_index_mat[:,:,1]+.75)
-    z= np.sqrt(np.power(depth_values,2)-np.power(x,2)-np.power(y,2)) #This loses some values but i cannot figure out why.
+    # z= np.sqrt(np.power(depth_values,2)-np.power(x,2)-np.power(y,2)) #This loses some values but i cannot figure out why.
+    z = np.sqrt(np.maximum(np.power(depth_values, 2) - np.power(x, 2) - np.power(y, 2), 0))
+
     return x,y,z
 
 def filter_data(x,y,z):
@@ -352,7 +354,8 @@ def main():
         
         predictions=np.zeros([future_timesegments,2*len(participants)])
         for p in range(len(participants)):
-            input = torch.tensor([local_par_pos[:,p:p+2]]).to(torch.float32)
+            # input = torch.tensor([local_par_pos[:,p:p+2]]).to(torch.float32)
+            input = torch.tensor(np.array([local_par_pos[:, p:p + 2]])).to(torch.float32)
             pred = LSTM_predict.prediction(input)
             predictions[:,2*p:2*p+2]=pred.detach().numpy()[0]
 
