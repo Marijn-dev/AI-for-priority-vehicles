@@ -23,26 +23,26 @@ target = target_coordinates[target_direction]
 
 # Generate a set of potential motion primitives
 primitives = [
-        # {'curvature': 0, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': 0, 'distance': 10, 'velocity': 0.65},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 0, 'distance': 10, 'velocity': 0.65},
         {'curvature': 0, 'distance': 20, 'velocity': 0.75},
-        # {'curvature': 0, 'distance': 20, 'velocity': 0.9},
-        # {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
-        # {'curvature': 5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 0, 'distance': 20, 'velocity': 0.9},
+        {'curvature': 2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 2.5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': 5, 'distance': 10, 'velocity': 0.5},
         {'curvature': 5, 'distance': 20, 'velocity': 0.7},
-        # {'curvature': 10, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        # {'curvature': 15, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': 15, 'distance': 10, 'velocity': 0.7},
-        # {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
-        # {'curvature': -5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': 15, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -2.5, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -2.5, 'distance': 20, 'velocity': 0.7},
+        {'curvature': -5, 'distance': 10, 'velocity': 0.5},
         {'curvature': -5, 'distance': 20, 'velocity': 0.7},
-        # {'curvature': -10, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        # {'curvature': -15, 'distance': 10, 'velocity': 0.5},
-        # {'curvature': -15, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.5},
+        {'curvature': -15, 'distance': 10, 'velocity': 0.7},
     ]
 
 def generate_random_colors(num_colors):
@@ -191,7 +191,6 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         curvature_rad_per_meter = np.radians(primitive['curvature'])
         distance = primitive['distance']
         dynamic_margin = dynamic_safety_margin(primitive['velocity'])
-        # print(dynamic_margin)
         half_width = ((vehicle_width + dynamic_margin) / 2)
         penalty = time_penalty(primitive['velocity'])
         target_x, target_y = target
@@ -250,17 +249,6 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         x_all_indices = np.clip(x_all_indices, 0, costmap.shape[1] - 1)
         y_all_indices = np.clip(y_all_indices, 0, costmap.shape[0] - 1)
 
-        # # Debug plot to visualize indices
-        # fig, ax = plt.subplots(figsize=(10, 10))
-        # ax.imshow(costmap, cmap=cmap, interpolation='nearest')
-        # ax.scatter(x_all_indices, y_all_indices, color='red', s=1)
-        # ax.plot(x_center, y_center, 'b-', label='Motion Primitive')
-        # ax.plot(x_left, y_left, 'r--', label='Left Buffer')
-        # ax.plot(x_right, y_right, 'r--', label='Right Buffer')
-        # ax.set_xlim(0, 800)
-        # ax.set_ylim(800, 400)
-        # plt.show()
-
         # Calculate path costs
         path_costs = costmap[y_all_indices, x_all_indices]
 
@@ -283,11 +271,12 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 
             collision_cost += np.sum(predicted_costmaps[t][segment_y_indices, segment_x_indices])
 
-        total_cost = gps_cost #normalized_cost + gps_cost + collision_cost
+        total_cost = gps_cost  # Adjust as needed: normalized_cost + gps_cost + collision_cost
 
         costs.append(total_cost)
 
     return np.array(costs)
+
 
 def select_best_primitive(primitive_costs):
     # Function to select the primitive with the lowest cost
