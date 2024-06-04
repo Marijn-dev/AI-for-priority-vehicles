@@ -51,7 +51,7 @@ def prediction(input,global_path_to_model):
     output_size = 2  # Size of output vectors (x and y coordinates)
     num_layers = 2# amount of layers (hyperparameter)
     future_timesegments = 4
-    model_name = 'LSTM_PAST5_FUTURE4_H500_L2_RELU.pt'
+    model_name = 'AILSTM_PAST5_FUTURE4_H500_L2_RELU.pt'
     LSTM_model = SimpleRNN(input_size, hidden_size, output_size, num_layers, future_timesegments)
     LSTM_model = torch.load(global_path_to_model)
     hidden = LSTM_model.init_hidden(input)
