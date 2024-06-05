@@ -117,15 +117,15 @@ def scenario_setup(goal_target='find_spawn_point_1'):
 
     world.tick()  # Synchronize the world state
 
-    # Apply a simple motion primitive to the regular cars (example: go straight)
-    if regular_cars_1:
-        control = carla.VehicleControl(throttle=0.7, steer=0.0)
-        regular_cars_1.apply_control(control)
+    # # Apply a simple motion primitive to the regular cars (example: go straight)
+    # if regular_cars_1:
+    #     control = carla.VehicleControl(throttle=0.7, steer=0.0)
+    #     regular_cars_1.apply_control(control)
 
-    if regular_cars_2:
-        control = carla.VehicleControl(throttle=0.7, steer=0.0)
-        regular_cars_2.apply_control(control)
+    # if regular_cars_2:
+    #     control = carla.VehicleControl(throttle=0.7, steer=0.0)
+    #     regular_cars_2.apply_control(control)
 
-    world.tick()  # Ensure the controls are applied in the same tick
+    # world.tick()  # Ensure the controls are applied in the same tick
 
     return ai_ambulance, participants, participant_labels, depth_camera, segment_camera, world, target
