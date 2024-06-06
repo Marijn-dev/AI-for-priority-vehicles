@@ -59,8 +59,13 @@ def calc_cartesian_image_data(rel_coords, depth_values):
 
     x = a * depth_values * (camera_index_mat[:, :, 0] + 1)
     y = a * depth_values * (camera_index_mat[:, :, 1] + .75)
-    z = np.sqrt(np.power(depth_values, 2) - np.power(x, 2) - np.power(y, 2))  # This loses some values but i cannot figure out why.
+    # z = np.sqrt(np.power(depth_values, 2) - np.power(x, 2) - np.power(y, 2))  # This loses some values but i cannot figure out why.
+    z_squared = np.power(depth_values, 2) - np.power(x, 2) - np.power(y, 2)
+    z_squared[z_squared < 0] = 0  # Set negative values to zero
+    z = np.sqrt(z_squared)
+
     return x, y, z
+
 
 def filter_data(x, y, z):
     x[np.isnan(x)] = 0
@@ -192,8 +197,8 @@ def main():
     ambulance_location = ambulance.get_transform().location
     ambulance_rotation = ambulance.get_transform().rotation
 
-    depth_data = plt.imread('Rubens_test_files/Pictures/depth_004641.png')
-    segment_data = plt.imread('Rubens_test_files/Pictures/instance_004641.png')
+    depth_data = plt.imread('current_depth_image.png')
+    segment_data = plt.imread('current_instance_image.png')
 
     print(len(depth_data[0,0,:]))
     depth_data = convert_image_to_depth(depth_data)
@@ -209,7 +214,7 @@ def main():
     x, y, z = calc_cartesian_image_data(camera_coordinates, depth_data)
 
     x, y, z = filter_data(x, y, z)
-
+    print(x)
     map_width = 120  # meters
     map_height = 240  # meters
     cell_size = 0.1  # meters
@@ -332,7 +337,9 @@ def main():
         
         predictions = np.zeros([future_timesegments, 2 * len(participants)])
         for p in range(len(participants)):
-            model_input = torch.tensor([local_par_pos[:, p:p + 2]]).to(torch.float32)
+            # Assuming local_par_pos is a NumPy array, which it should be based on the context
+            model_input_np = np.array([local_par_pos[:, p:p + 2]])  # Convert to NumPy array
+            model_input = torch.tensor(model_input_np).to(torch.float32)  # Convert to tensor
             pred = LSTM_predict.prediction(model_input)
             predictions[:, 2 * p:2 * p + 2] = pred.detach().numpy()[0]
         
