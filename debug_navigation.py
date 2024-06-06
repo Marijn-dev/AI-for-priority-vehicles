@@ -28,7 +28,7 @@ def convert_image_to_depth(image_data):
     G = image_data[:, :, 1]
     B = image_data[:, :, 2]
  
-    scale_factor = 256
+    scale_factor = 868
     normalized = ((R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1)) * 1000 * scale_factor
 
     return normalized
@@ -64,7 +64,7 @@ def calc_cartesian_image_data(rel_coords, depth_values):
     z_squared[z_squared < 0] = 0  # Set negative values to zero
     z = np.sqrt(z_squared)
 
-    return x, y, z
+    return x/4, y, z/3
 
 
 def filter_data(x, y, z):
