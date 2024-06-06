@@ -27,9 +27,10 @@ def convert_image_to_depth(image_data):
     R = image_data[:, :, 0]
     G = image_data[:, :, 1]
     B = image_data[:, :, 2]
-
+ 
     scale_factor = 256
     normalized = ((R + G * 256 + B * 256 * 256) / (256 * 256 * 256 - 1)) * 1000 * scale_factor
+
     return normalized
 
 def define_camera_matrix():
@@ -194,6 +195,7 @@ def main():
     depth_data = plt.imread('Rubens_test_files/Pictures/depth_004641.png')
     segment_data = plt.imread('Rubens_test_files/Pictures/instance_004641.png')
 
+    print(len(depth_data[0,0,:]))
     depth_data = convert_image_to_depth(depth_data)
     segment_data = np.round(segment_data * 255)
     labels = segment_data[:, :, 0]
@@ -270,32 +272,46 @@ def main():
         segment_camera.listen(lambda data: seg_image_queue.put(data))
         print("Segment camera is listening")
         
-        def get_camera_data(camera_queue, timeout=30):
-            try:
-                data = camera_queue.get(timeout=timeout)
-                return data.raw_data
-            except queue.Empty:
-                print("Warning: Timeout waiting for camera data.")
-                return None
+        instance_image=seg_image_queue.get()
+        instance_image.save_to_disk(r"current_instance_image.png")
+        depth_image=image_queue.get()
+        depth_image.save_to_disk(r"current_depth_image.png")
+        print("two pictures coming right up")
         
-        depth_data = get_camera_data(image_queue)
-        if depth_data is not None:
-            depth_data = np.reshape(depth_data, [600, 800, 4])
-            depth_data = convert_image_to_depth(depth_data)
-            print(f"Depth data is converted")
-        else:
-            print("No depth data received.")
-            continue
+
+
+        depth_data = plt.imread('current_depth_image.png')
+        segment_data = plt.imread('current_instance_image.png')
+        depth_data=convert_image_to_depth(depth_data)
+
+        segment_data=np.round(segment_data*255)
+        labels=segment_data[:,:,0]
+        # def get_camera_data(camera_queue, timeout=30):
+        #     try:
+        #         data = camera_queue.get(timeout=timeout)
+        #         return data.raw_data
+        #     except queue.Empty:
+        #         print("Warning: Timeout waiting for camera data.")
+        #         return None
         
-        segment_data = get_camera_data(seg_image_queue)
-        if segment_data is not None:
-            segment_data = np.reshape(segment_data, [600, 800, 4])
-            segment_data = np.round(segment_data * 255)
-            print(f"Segment data is converted")
-            labels = segment_data[:, :, 0]
-        else:
-            print("No segment data received.")
-            continue
+        # depth_data = get_camera_data(image_queue)
+        # if depth_data is not None:
+        #     depth_data = np.reshape(depth_data, [600, 800, 4])
+        #     depth_data = convert_image_to_depth(depth_data)
+        #     print(f"Depth data is converted")
+        # else:
+        #     print("No depth data received.")
+        #     continue
+        
+        # segment_data = get_camera_data(seg_image_queue)
+        # if segment_data is not None:
+        #     segment_data = np.reshape(segment_data, [600, 800, 4])
+        #     segment_data = np.round(segment_data * 255)
+        #     print(f"Segment data is converted")
+        #     labels = segment_data[:, :, 0]
+        # else:
+        #     print("No segment data received.")
+        #     continue
         
         print("Camera data processed.")
         
