@@ -179,14 +179,14 @@ def get_primitives():
         {'curvature': 2.5, 'distance': 20, 'velocity': 0.9},
         {'curvature': 5, 'distance': 10, 'velocity': 0.7},
         {'curvature': 5, 'distance': 20, 'velocity': 0.9},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.9},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.9},
         {'curvature': -2.5, 'distance': 10, 'velocity': 0.7},
         {'curvature': -2.5, 'distance': 20, 'velocity': 0.9},
         {'curvature': -5, 'distance': 10, 'velocity': 0.7},
         {'curvature': -5, 'distance': 20, 'velocity': 0.9},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.9},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.9},
     ]
     return primitives
 
@@ -200,7 +200,7 @@ def main():
     depth_data = plt.imread('current_depth_image.png')
     segment_data = plt.imread('current_instance_image.png')
 
-    print(len(depth_data[0,0,:]))
+    # print(len(depth_data[0,0,:]))
     depth_data = convert_image_to_depth(depth_data)
     segment_data = np.round(segment_data * 255)
     labels = segment_data[:, :, 0]
@@ -214,7 +214,7 @@ def main():
     x, y, z = calc_cartesian_image_data(camera_coordinates, depth_data)
 
     x, y, z = filter_data(x, y, z)
-    print(x)
+    # print(x)
     map_width = 120  # meters
     map_height = 240  # meters
     cell_size = 0.1  # meters
@@ -359,8 +359,13 @@ def main():
         active_set_x, active_set_y, active_set_z = trim_active_set(active_set_x, active_set_y, active_set_z)
         
         cost_map = map2grid(cost_map, active_set_x, active_set_z, labels, map_width, map_height, cell_size)
+
+        save_costmap_plot(cost_map, active_set_x, active_set_z, labels, i_time_steps)
         
         collision_map = create_collision_map(participants_labels, predictions, cost_map, prediction_horizon)
+
+        for segment in range(prediction_horizon):
+            save_collision_map_plot(collision_map[segment], i_time_steps, segment)
         
         vehicle_width = 2.4
         x_offset = 0
@@ -368,13 +373,9 @@ def main():
         
         primitives = get_primitives()
         costs = mp.calculate_primitive_costs(cost_map, collision_map, primitives, cell_size, x_offset, y_offset, vehicle_width, ambulance_location, ambulance_rotation, target)
+        print(f"costs: {costs}")
         best_primitive = mp.select_best_primitive(costs)
         throttle, steer, brake = mp.convert_to_vehicle_control(best_primitive)
-        
-        save_costmap_plot(cost_map, active_set_x, active_set_z, labels, i_time_steps)
-        
-        for segment in range(prediction_horizon):
-            save_collision_map_plot(collision_map[segment], i_time_steps, segment)
         
         # Set control for the regular cars
         if participants[0]:
@@ -387,10 +388,10 @@ def main():
             tick_start_time = time.time()
             world.tick()
             tick_end_time = time.time()
-            print(f"world.tick() time: {tick_end_time - tick_start_time} seconds")
+            # print(f"world.tick() time: {tick_end_time - tick_start_time} seconds")
             ambulance.apply_control(carla.VehicleControl(throttle, steer, brake))
         
-        print(time.time())
+        # print(time.time())
         print(best_primitive)
 
         # Introduce a brief pause

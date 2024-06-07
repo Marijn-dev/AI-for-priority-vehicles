@@ -31,14 +31,14 @@ primitives = [
         {'curvature': 2.5, 'distance': 20, 'velocity': 0.9},
         {'curvature': 5, 'distance': 10, 'velocity': 0.7},
         {'curvature': 5, 'distance': 20, 'velocity': 0.9},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': 10, 'distance': 10, 'velocity': 0.9},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': 10, 'distance': 10, 'velocity': 0.9},
         {'curvature': -2.5, 'distance': 10, 'velocity': 0.7},
         {'curvature': -2.5, 'distance': 20, 'velocity': 0.9},
         {'curvature': -5, 'distance': 10, 'velocity': 0.7},
         {'curvature': -5, 'distance': 20, 'velocity': 0.9},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.7},
-        {'curvature': -10, 'distance': 10, 'velocity': 0.9},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.7},
+        # {'curvature': -10, 'distance': 10, 'velocity': 0.9},
     ]
 
 def generate_random_colors(num_colors):
@@ -189,6 +189,7 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
         dynamic_margin = dynamic_safety_margin(primitive['velocity'])
         half_width = ((vehicle_width + dynamic_margin) / 2)
         penalty = time_penalty(primitive['velocity'])
+        print(f"penalty: {penalty}")
         target_x, target_y = target
 
         if primitive['curvature'] != 0:
@@ -247,17 +248,33 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 
         # Calculate path costs
         path_costs = costmap[y_all_indices, x_all_indices]
+        # print(f"path costs: {path_costs}")
 
         if len(path_costs) == 0:
             summed_cost = np.inf
         else:
             summed_cost = np.sum(path_costs)
 
+        print(f"summed cost: {summed_cost}")
+
         normalized_cost = summed_cost / distance + penalty
+
+        if primitive['curvature'] == 0:
+            normalized_cost /= 5
+
+        if primitive['curvature'] == -5:
+            normalized_cost * 5
+
+        if primitive['curvature'] == 5:
+            normalized_cost * 5
+
+        print(f"normalized cost: {normalized_cost}")
 
         # Calculate the final global coordinates of the primitive
         x_final_global, y_final_global = calculate_final_global_coordinates(ambulance_location, ambulance_rotation, distance, curvature_rad_per_meter)
         gps_cost = calculate_gps_cost(x_final_global, y_final_global, target_x, target_y)
+        gps_cost *= 100
+        print(f"GPS cost: {gps_cost}")
 
         collision_cost = 0
         for t in range(len(predicted_costmaps)):
@@ -267,7 +284,9 @@ def calculate_primitive_costs(costmap, predicted_costmaps, primitives, cell_size
 
             collision_cost += np.sum(predicted_costmaps[t][segment_y_indices, segment_x_indices])
 
-        total_cost = normalized_cost #+ gps_cost + collision_cost
+        print(f"collision cost: {collision_cost}")
+
+        total_cost = normalized_cost + gps_cost #+ collision_cost
 
         costs.append(total_cost)
 
