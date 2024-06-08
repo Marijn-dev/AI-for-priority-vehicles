@@ -110,22 +110,22 @@ def scenario_setup(goal_target='find_spawn_point_1'):
     # Set the spectator position
     spectator = world.get_spectator()
     spectator_transform = carla.Transform(
-        carla.Location(x=185.65426635742188, y=-328.8107604980469, z=33.317054748535156),
+        carla.Location(x=175.65426635742188, y=-338.8107604980469, z=43.317054748535156),
         carla.Rotation(pitch=-50.184872, yaw=41.805153, roll=0.000003)
     )
     spectator.set_transform(spectator_transform)
 
     world.tick()  # Synchronize the world state
 
-    # Apply a simple motion primitive to the regular cars (example: go straight)
-    if regular_cars_1:
-        control = carla.VehicleControl(throttle=0.7, steer=0.0)
-        regular_cars_1.apply_control(control)
+    # # Apply a simple motion primitive to the regular cars (example: go straight)
+    # if regular_cars_1:
+    #     control = carla.VehicleControl(throttle=0.7, steer=0.0)
+    #     regular_cars_1.apply_control(control)
 
-    if regular_cars_2:
-        control = carla.VehicleControl(throttle=0.7, steer=0.0)
-        regular_cars_2.apply_control(control)
+    # if regular_cars_2:
+    #     control = carla.VehicleControl(throttle=0.7, steer=0.0)
+    #     regular_cars_2.apply_control(control)
 
-    world.tick()  # Ensure the controls are applied in the same tick
+    # world.tick()  # Ensure the controls are applied in the same tick
 
     return ai_ambulance, participants, participant_labels, depth_camera, segment_camera, world, target
