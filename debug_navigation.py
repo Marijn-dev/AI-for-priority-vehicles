@@ -18,16 +18,37 @@ import selection_motion_primitive as mp
 
 
 
-def get_point_image(point_img,K_inv,Width,Height):
-        loc_mat=np.zeros([Height,Width,3])
-        static_projection_matrix=np.zeros([Height,Width,3])
-        for i in range(Height):
-                for j in range(Width):
-                        loc_mat[i,j] = [j-Width/2,i-Height/2,1]
-                        static_projection_matrix[i,j]=np.dot(K_inv,loc_mat[i,j])
-        return static_projection_matrix
+def get_point_image(K_inv,Width,Height):
+    '''
+    defines the line of possible coordinates corresponing to a pixel in the image
+
+    Parameters
+    ---------------
+    K_inv: the inverse of the K matrix specified by the camera properties
+    Width: the width of the image in pixels
+    Height: the height of the image in pixels
+
+    Return: a matrix with the width and height as the image, together with a third dimension describing the a an b
+    used to describe the line of possible coordinates as ax+by=c
+    '''
+    loc_mat=np.zeros([Height,Width,3])
+    static_projection_matrix=np.zeros([Height,Width,3])
+    for i in range(Height):
+            for j in range(Width):
+                    loc_mat[i,j] = [j-Width/2,i-Height/2,1]
+                    static_projection_matrix[i,j]=np.dot(K_inv,loc_mat[i,j])
+    return static_projection_matrix
 
 def convert_image_to_depth(image_data):
+    '''
+    Carla encodes its depth data in the RGB channels of the image. This calculate converts it to meters
+    
+    Parameters
+    ------------
+    image_data: the RGB image data from the carla depth camera
+
+    Return: A matrix of the same dimensions as the image except the third dimension is now just the depth in meters
+    '''
     R=image_data[:,:,0]
     G=image_data[:,:,1]
     B=image_data[:,:,2]
@@ -37,6 +58,15 @@ def convert_image_to_depth(image_data):
     return normalized
 
 def define_camera_matrix():
+    '''
+    This function calculates the inverse K matrix for the depth camera using the camera properties of the carla depth camera. 
+
+    Parameters
+    -------------
+    Return: The inverse K matrix of the depth camera.
+
+    
+    '''
     fov = 90
     im_size_x = 800
     im_size_y = 600
@@ -51,7 +81,7 @@ def define_camera_matrix():
 def calc_cartesian_image_data(rel_coords,depth_values):
     '''
     Figure out where the pixels in the image are relative to the car.
-    This is using properties of similar triangles to calculate the real x,y and z
+    This is done using properties of similar triangles to calculate the real x,y and z
     -----------------------------
     Parameters:
     rel_coords = a matrix of (image_width,image_height,[x,y,1]) 
@@ -79,6 +109,10 @@ def calc_cartesian_image_data(rel_coords,depth_values):
     return x,y,z
 
 def filter_data(x,y,z):
+    '''
+    Remove invalid data from the input
+    '''
+
     x[np.isnan(x)==True]=0
     y[np.isnan(y)==True]=0  
     z[np.isnan(z)==True]=0
@@ -125,6 +159,11 @@ def map2grid(map, x, z, labels, width, height, cell_size=0.1):
     return map
 
 def trim_active_set(x,y,z):
+    '''
+    Remove image data that is too far away to fit into the map of the direct environment of the car,
+    also removes data higher than the car to avoid it seeing overhanging poles as relevant obstacles 
+    
+    '''
     y=np.array(y)
     condition=((x>60) | (x<-60) |(y<1) | (z<0) | (z>120)) #note that the sensor is already on top of the car so the 0,0 point is not at floor level
     x[condition]=0
@@ -133,6 +172,22 @@ def trim_active_set(x,y,z):
     return x,y,z
 
 def translate_active_set(x_data,z_data,x_move,z_move,theta):
+    '''
+    Transform x and z data of a map into a new reference frame
+
+    Parameters
+    ---------------
+    X_data: the point's x coordinate
+    z_data: the point's z coordinate
+    x_move the displacement in the x_direction defined in the global frame
+    z_move the displacement in the z_direction defined in the global frame
+    theta: the rotation of the vehicle in radians
+
+    Returns
+    x_data: The transformed x_data 
+    z_data: THe transformed z_data
+    '''
+
     #rotation of a frame just along the y axis https://nl.mathworks.com/help/fusion/gs/spatial-representation-coordinate-systems-and-conventions.html
     x_data= (x_data+ x_move)*np.cos(theta) + (z_data+ z_move)*-np.sin(theta)
     z_data= (x_data+ x_move)*np.sin(theta) + (z_data+ z_move)*np.cos(theta)
@@ -146,15 +201,41 @@ def write_relative_positions(writer, timestamp, actor_type, actors, reference_lo
         writer.writerow([timestamp, actor_type, actor.id, relative_x, relative_y])
 
 def get_new_positions(participant,ambulance):
+    '''
+    get the position of another traffic particpant inside the ambulances frame. 
+
+    Parameters
+    ----------
+    participant: the carla vehicle object or pedestrian object but works on anything that has a transform object attached.
+    ambulance: the carla vehicle object, works for anything that has a transform object. 
+
+    return
+    x: the x coordinate of the participant in the cars frame
+    z: the z coordinate of the particpant in the cars frame
+    '''
     location=participant.get_transform().location - ambulance.get_transform().location
     theta=ambulance.get_transform().rotation.yaw
-    location.x= (location.x)*np.cos(theta) + (location.x)*-np.sin(theta)
-    location.z= (location.x)*np.sin(theta) + (location.z)*np.cos(theta)
-    return location.x,location.z
+    x= (location.x)*np.cos(theta) + (location.x)*-np.sin(theta)
+    z= (location.x)*np.sin(theta) + (location.z)*np.cos(theta)
+    return x,z
       
 def create_collision_map(participants_labels,participants_positions,cost_map,prediction_horizon):
-    #ASsumes the positions are in the grid size already
-    #create a matrix per timestep M(x,z,t)
+    '''
+    creates a list of 2d matrixes, one for every predicted timestep. the 2d matrixes are the same size as the cost map. 
+    These cost maps are empty except for the predicted vehicle locations
+    
+    Parameters
+    -----------
+    participants_labels: a list of either 'car' or 'pedestrian'
+    participants positions: a matrix of x and y coordinates appended after each other the positions of the other traffic participants relative to the ambulance
+    cost_map: the static costmap, only passed to get the sizes of the map
+    prediction_horizon: int the amount of future predictions. 
+
+    Return
+    M: A list of 2d costmaps. to get a position p at time step t indice M[t][p_x,p_z]
+    '''
+   
+  
     M=[np.zeros_like(cost_map)]*prediction_horizon
 
     for p in range(len(participants_labels)):
@@ -166,7 +247,22 @@ def create_collision_map(participants_labels,participants_positions,cost_map,pre
    
    
 
-def place_traffic_participants(t,p,participants_labels,participants_positions,M,cell_multiplier=10):  
+def place_traffic_participants(t,p,participants_labels,participants_positions,M,cell_multiplier=10): 
+    '''
+    Fills in a participants position on the cost map
+
+    Parameters
+    ----------
+    t:int the timestep of the prediction
+    p: int the number of the participant in the participant positions
+    participants_labels: list[string] the labels of the participants; either 'car' or 'pedestrian'
+    participants positions: a matrix of x and y coordinates appended after each other the positions of the other traffic participants relative to the ambulance
+    M: the list of costmaps defined by create_collision_map()
+    cell_multiplier: int, the inverse of the cell_size. 
+
+    return
+    M the list of costmaps defined by create_collision_map() now with a participants location at a specific timestep filled in. 
+    ''' 
     #Known issue: this places high costs in the corners, fix later as it is not relevant for its function.
     #coordinates relative to the ego car
     x_car=int(np.round(participants_positions[t,p*2]*cell_multiplier))
@@ -235,7 +331,7 @@ def main():
     depth_Height=len(depth_data[:,1])
     
     K_inv=define_camera_matrix()
-    camera_coordinates=get_point_image(depth_data,K_inv,depth_Width,depth_Height)
+    camera_coordinates=get_point_image(K_inv,depth_Width,depth_Height)
 
     x,y,z = calc_cartesian_image_data(camera_coordinates,depth_data)
 
