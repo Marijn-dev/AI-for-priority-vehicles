@@ -9,7 +9,7 @@ import LSTM as lstm
 import queue
 
 import carla
-from LSTM_predict import SimpleRNN
+from LSTM_predict import SimpleLSTM
 import LSTM_predict
 import scenario_setup as scene
 import selection_motion_primitive as mp
